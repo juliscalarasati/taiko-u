@@ -3,7 +3,7 @@ const cors = require("cors");
 const db = require("./db");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
@@ -92,7 +92,7 @@ app.post("/api/register", async (req, res) => {
 
     const [existingUser] = await db.query(
       "SELECT id FROM users WHERE email = ?",
-      [email],
+      [email]
     );
 
     if (existingUser.length > 0) {
@@ -104,7 +104,7 @@ app.post("/api/register", async (req, res) => {
 
     await db.query(
       "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
-      [name, email, password, role || "user"],
+      [name, email, password, role || "user"]
     );
 
     res.status(201).json({
@@ -134,7 +134,7 @@ app.post("/api/login", async (req, res) => {
 
     const [users] = await db.query(
       "SELECT id, name, email, role FROM users WHERE email = ? AND password = ?",
-      [email, password],
+      [email, password]
     );
 
     if (users.length === 0) {
@@ -180,7 +180,7 @@ app.post("/api/umkm", async (req, res) => {
         pemilik || null,
         kategori || null,
         alamat || null,
-      ],
+      ]
     );
 
     res.status(201).json({
@@ -201,7 +201,7 @@ app.post("/api/umkm", async (req, res) => {
 app.get("/api/umkm", async (req, res) => {
   try {
     const [rows] = await db.query(
-      "SELECT * FROM umkm ORDER BY created_at DESC",
+      "SELECT * FROM umkm ORDER BY created_at DESC"
     );
 
     res.json({
@@ -272,7 +272,7 @@ app.post("/api/assessments", async (req, res) => {
         hasilPrediksi.status_kesehatan,
         hasilPrediksi.catatan,
         JSON.stringify(answers),
-      ],
+      ]
     );
 
     res.status(201).json({
@@ -294,7 +294,7 @@ app.post("/api/assessments", async (req, res) => {
 app.get("/api/assessments", async (req, res) => {
   try {
     const [rows] = await db.query(
-      "SELECT * FROM assessments ORDER BY created_at DESC",
+      "SELECT * FROM assessments ORDER BY created_at DESC"
     );
 
     res.json({
@@ -317,20 +317,20 @@ app.get("/api/dashboard", async (req, res) => {
     const [totalUsers] = await db.query("SELECT COUNT(*) AS total FROM users");
     const [totalUmkm] = await db.query("SELECT COUNT(*) AS total FROM umkm");
     const [totalAssessments] = await db.query(
-      "SELECT COUNT(*) AS total FROM assessments",
+      "SELECT COUNT(*) AS total FROM assessments"
     );
 
     const [statusData] = await db.query(
       `SELECT status_kesehatan, COUNT(*) AS total
        FROM assessments
-       GROUP BY status_kesehatan`,
+       GROUP BY status_kesehatan`
     );
 
     const [latestAssessments] = await db.query(
       `SELECT id, nama_umkm, total_score, status_kesehatan, catatan, created_at
        FROM assessments
        ORDER BY created_at DESC
-       LIMIT 5`,
+       LIMIT 5`
     );
 
     res.json({
@@ -420,7 +420,11 @@ app.get("/api/boxplot", async (req, res) => {
   }
 });
 
-// Jalankan server
-app.listen(PORT, () => {
-  console.log(`Server berjalan di http://localhost:${PORT}`);
-});
+// Jalankan server hanya saat lokal
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => {
+    console.log(`Server berjalan di http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
