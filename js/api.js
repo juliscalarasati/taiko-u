@@ -1,4 +1,8 @@
-const API_BASE_URL = "http://localhost:3000";
+const API_BASE_URL =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+    ? "http://localhost:3000"
+    : "";
 
 async function apiRequest(endpoint, method = "GET", body = null) {
   const options = {
@@ -12,8 +16,26 @@ async function apiRequest(endpoint, method = "GET", body = null) {
     options.body = JSON.stringify(body);
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
-  const data = await response.json();
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+    const data = await response.json();
 
-  return data;
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || "Terjadi kesalahan pada server.",
+        error: data.error || null,
+      };
+    }
+
+    return data;
+  } catch (error) {
+    console.error("API request error:", error);
+
+    return {
+      success: false,
+      message: "Terjadi kesalahan saat menghubungkan ke server.",
+      error: error.message,
+    };
+  }
 }
