@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pengaturan - TAIKO & U</title>
+
+  <link rel="stylesheet" href="/theme/global.css">
+  <link rel="stylesheet" href="pengaturan.css" />
+</head>
+
+
+
+<body>
+  <div class="page">
+    <aside class="sidebar">
+      <div class="brand">
+        <h2>TAIKO & U</h2>
+        <p>Pengaturan Akun</p>
+      </div>
+
+      <nav class="menu">
+        <a href="/beranda/index.html">Beranda</a>
+        <a href="/daftar_umkm/daftar_umkm.html">Daftar UMKM</a>
+        <a href="/kuisioner/kuisioner.html">Kuesioner</a>
+        <a href="/detail/detail_analisis.html">Detail Analisis</a>
+        <a href="/saran_rekomendasi/saran_rekomendasi.html">Saran & Rekomendasi</a>
+        <a class="active" href="#">Pengaturan</a>
+        <a href="/profil/profil.html">Profil</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <span class="eyebrow">Pengaturan Sistem</span>
+          <h1>Kelola Akun & Data UMKM</h1>
+          <p>Atur informasi akun, data UMKM, dan sesi login pengguna.</p>
+        </div>
+      </header>
+
+      <section id="guestState" class="empty-state" style="display:none;">
+        <h2>Belum Login</h2>
+        <p>Silakan login terlebih dahulu untuk mengakses pengaturan akun.</p>
+        <a href="../login/login.html">Login Sekarang</a>
+      </section>
+
+      <section id="settingContent">
+        <div class="settings-grid">
+
+          <div class="panel">
+            <h2>Profil Pengguna</h2>
+
+            <div class="info-list">
+              <div>
+                <span>Nama</span>
+                <strong id="userName">-</strong>
+              </div>
+
+              <div>
+                <span>Email</span>
+                <strong id="userEmail">-</strong>
+              </div>
+
+              <div>
+                <span>Role</span>
+                <strong id="userRole">-</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2>Data UMKM</h2>
+
+            <div class="info-list">
+              <div>
+                <span>Nama UMKM</span>
+                <strong id="umkmName">-</strong>
+              </div>
+
+              <div>
+                <span>Sektor</span>
+                <strong id="umkmSector">-</strong>
+              </div>
+
+              <div>
+                <span>ID UMKM</span>
+                <strong id="umkmId">-</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel full-panel">
+            <h2>Status Data</h2>
+
+            <div class="status-grid">
+              <div class="status-card">
+                <span>Total User Terdaftar</span>
+                <h3 id="totalUsers">0</h3>
+              </div>
+
+              <div class="status-card">
+                <span>Total Assessment</span>
+                <h3 id="totalAssessments">0</h3>
+              </div>
+
+              <div class="status-card">
+                <span>Status Login</span>
+                <h3 id="loginStatus">-</h3>
+              </div>
+            </div>
+          </div>
+          
+
+          <div class="panel full-panel">
+            <h2>Aksi Akun</h2>
+
+            <div class="action-list">
+              <button class="btn-secondary" onclick="goToDashboard()">Kembali ke Dashboard</button>
+              <button class="btn-warning" onclick="logoutUser()">Logout</button>
+              <button class="btn-danger" onclick="resetDemoData()">Reset Semua Data Demo</button>
+            </div>
+
+            <p class="note">
+              Reset data demo akan menghapus akun register, status login, jawaban kuesioner,
+              dan hasil assessment yang tersimpan di localStorage browser.
+            </p>
+          </div>
+
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="pengaturan.js"></script>
+</body>
+</html>

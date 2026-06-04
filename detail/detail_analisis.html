@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Detail Analisis - TAIKO & U</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4.4.4/build/index.umd.min.js"></script>
+
+    <link rel="stylesheet" href="/theme/global.css" />
+    <link rel="stylesheet" href="detail_analisis.css" />
+  </head>
+
+  <body>
+    <div class="detail-page">
+      <aside class="sidebar">
+        <div class="brand">
+          <h2>TAIKO & U</h2>
+          <p>Detail Analisis Organisasi</p>
+        </div>
+
+        <nav class="menu">
+          <a href="/beranda/index.html">Beranda</a>
+          <a href="/daftar_umkm/daftar_umkm.html">Daftar UMKM</a>
+          <a href="/kuisioner/kuisioner.html">Kuesioner</a>
+          <a
+            class="active"
+            href="../detail/detail_analisis.html"
+            onclick="
+              localStorage.removeItem('selectedUmkm');
+              localStorage.removeItem('previewAssessments');
+            "
+            >Detail Analisis</a
+          >
+          <a href="/saran_rekomendasi/saran_rekomendasi.html"
+            >Saran & Rekomendasi</a
+          >
+          <a href="/pengaturan/pengaturan.html">Pengaturan</a>
+          <a href="/profil/profil.html">Profil</a>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <h1>Detail Analisis Kesehatan Organisasi</h1>
+            <p id="umkmInfo">Memuat data UMKM...</p>
+          </div>
+        </header>
+
+        <section id="emptyState" class="empty-state" style="display: none">
+          <h2>Belum Ada Hasil Kuesioner</h2>
+          <p>
+            Silakan isi kuesioner terlebih dahulu untuk melihat detail analisis
+            organisasi.
+          </p>
+          <a href="../kuisioner/kuisioner.html">Isi Kuesioner</a>
+        </section>
+
+        <section id="analysisContent">
+          <section class="summary-grid">
+            <div class="summary-card">
+              <span>Total Responden</span>
+              <h3 id="respondentCount">0</h3>
+              <p>Owner dan karyawan yang telah mengisi kuesioner.</p>
+            </div>
+
+            <div class="summary-card">
+              <span>Skor Gabungan</span>
+              <h3 id="averageScore">0.00</h3>
+              <p>Rata-rata dari seluruh assessment pada UMKM ini.</p>
+            </div>
+
+            <div class="summary-card">
+              <span>Kategori</span>
+              <h3 id="categoryResult">-</h3>
+              <p>Status kesehatan organisasi berdasarkan skor gabungan.</p>
+            </div>
+          </section>
+
+          <section class="analysis-layout">
+            <div class="analysis-left">
+              <div class="panel">
+                <h2>Skor Per Faktor</h2>
+
+                <div class="chart-wrapper">
+                  <canvas id="factorResultChart"></canvas>
+                </div>
+
+                <div class="factor-compact-note">
+                  <span><b>OV</b> Nilai Organisasi</span>
+                  <span><b>LDI</b> Kepemimpinan</span>
+                  <span><b>INS</b> Sumber Daya</span>
+                  <span><b>OPS</b> Stabilitas Operasional</span>
+                  <span><b>WEQ</b> Lingkungan Kerja</span>
+                  <span><b>ECT</b> Kinerja Ekonomi</span>
+                </div>
+              </div>
+
+              <section class="panel radar-panel">
+                <div class="radar-header">
+                  <span class="section-label">Profil Organisasi</span>
+                  <h2>Radar Chart Faktor Organisasi</h2>
+                  <p>
+                    Visualisasi ini menunjukkan keseimbangan setiap faktor
+                    kesehatan organisasi. Semakin luas area radar, semakin baik
+                    kondisi faktor UMKM.
+                  </p>
+                </div>
+
+                <div class="radar-wrapper">
+                  <canvas id="radarChart"></canvas>
+                </div>
+              </section>
+            </div>
+
+            <div class="analysis-right">
+              <div class="panel">
+                <h2>Insight Analisis</h2>
+                <div id="insightBox" class="insight-box"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel benchmark-panel">
+            <h2>Perbandingan Faktor dengan 428 UMKM</h2>
+            <p class="chart-desc">
+              Boxplot ini menampilkan distribusi skor setiap faktor kesehatan
+              organisasi berdasarkan data pembanding 428 UMKM.
+            </p>
+
+            <div class="chart-wrapper boxplot-wrapper">
+              <canvas id="factorBoxplotChart"></canvas>
+            </div>
+
+            <div id="benchmarkInsight" class="benchmark-insight"></div>
+          </section>
+
+          <section class="panel table-panel">
+            <h2>Daftar Pengisi Kuesioner</h2>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nama</th>
+                    <th>Role</th>
+                    <th>Tanggal</th>
+                    <th>Skor</th>
+                    <th>Kategori</th>
+                  </tr>
+                </thead>
+                <tbody id="assessmentTable"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="detail_analisis.js"></script>
+    <script src="../theme/theme.js"></script>
+  </body>
+</html>

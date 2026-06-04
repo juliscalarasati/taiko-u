@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kuesioner - TAIKO & U</title>
+    <link rel="stylesheet" href="/theme/global.css" />
+    <link rel="stylesheet" href="kuisioner.css" />
+  </head>
+
+  <body>
+    <div class="assessment-page">
+      <aside class="sidebar">
+        <h2>TAIKO & U</h2>
+        <p>Health Assessment<br />6 Tahap Evaluasi</p>
+
+        <nav id="stepMenu"></nav>
+
+        <a href="../beranda/index.html" class="back-dashboard"
+          >← Kembali ke Dashboard</a
+        >
+      </aside>
+
+      <main class="content">
+        <header class="topbar">
+          <div>
+            <span id="phaseLabel">ASSESSMENT</span>
+            <h1 id="sectionTitle">Bagian 1</h1>
+            <p id="sectionDesc"></p>
+          </div>
+
+          <div class="progress-text">
+            <strong id="progressNumber">16%</strong>
+            <span>Selesai</span>
+          </div>
+        </header>
+
+        <div class="progress-bar">
+          <div id="progressFill"></div>
+        </div>
+
+        <section id="questionContainer" class="question-list"></section>
+
+        <div class="navigation">
+          <button id="prevBtn" class="btn-secondary">← Kembali</button>
+          <button id="nextBtn" class="btn-primary">Selanjutnya →</button>
+        </div>
+      </main>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="kuisioner.js"></script>
+  </body>
+</html>

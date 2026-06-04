@@ -1,0 +1,305 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: transparent;
+  color: #24343a;
+}
+
+.page {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: #eef3f1;
+  padding: 24px 18px;
+  border-right: 1px solid #dbe5e1;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.brand h2 {
+  margin: 0;
+  color: #1f8a70;
+  font-size: 24px;
+}
+
+.brand p {
+  margin-top: 6px;
+  color: #6b7b83;
+  font-size: 14px;
+}
+
+.menu {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.menu a {
+  text-decoration: none;
+  color: #4a5c63;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.menu a.active,
+.menu a:hover {
+  background: #dff3ec;
+  color: #1f8a70;
+  font-weight: 700;
+}
+
+.main {
+  padding: 32px;
+}
+
+.topbar {
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  color: #1f8a70;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.topbar h1 {
+  margin: 10px 0 8px;
+  font-size: 32px;
+}
+
+.topbar p {
+  margin: 0;
+  color: #6b7b83;
+}
+
+.profile-hero {
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 76px 1fr auto;
+  gap: 18px;
+  align-items: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+  margin-bottom: 18px;
+}
+
+.avatar {
+  width: 76px;
+  height: 76px;
+  border-radius: 22px;
+  background: #dff3ec;
+  color: #1f8a70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.role-badge {
+  display: inline-block;
+  background: #dff3ec;
+  color: #1f8a70;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.profile-main h2 {
+  margin: 0 0 6px;
+  font-size: 26px;
+}
+
+.profile-main p {
+  margin: 0;
+  color: #6b7b83;
+}
+
+.edit-btn,
+.section-head a,
+.empty-state a {
+  background: #1f8a70;
+  color: #ffffff;
+  text-decoration: none;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.panel,
+.stat-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 22px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+}
+
+.panel h2 {
+  margin: 0 0 18px;
+  font-size: 20px;
+}
+
+.info-list {
+  display: grid;
+  gap: 14px;
+}
+
+.info-list div {
+  background: #f7fbf9;
+  border: 1px solid #dff3ec;
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.info-list span,
+.stat-card span {
+  display: block;
+  color: #6b7b83;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.info-list strong {
+  color: #24343a;
+  font-size: 15px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.stat-card h3 {
+  margin: 8px 0;
+  color: #1f8a70;
+  font-size: 28px;
+}
+
+.stat-card p {
+  margin: 0;
+  color: #6b7b83;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.section-head h2 {
+  margin: 0 0 6px;
+}
+
+.section-head p {
+  margin: 0;
+  color: #6b7b83;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+  color: #6b7b83;
+  font-size: 13px;
+  border-bottom: 1px solid #dbe5e1;
+  padding: 12px;
+}
+
+td {
+  padding: 12px;
+  border-bottom: 1px solid #eef3f1;
+  font-size: 14px;
+}
+
+.badge {
+  display: inline-block;
+  background: #dff3ec;
+  color: #1f8a70;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.empty-row {
+  text-align: center;
+  color: #6b7b83;
+}
+
+.empty-state {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 32px;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+}
+
+.empty-state h2 {
+  color: #1f8a70;
+  margin: 0 0 8px;
+}
+
+.empty-state p {
+  color: #6b7b83;
+}
+
+@media (max-width: 900px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .main {
+    padding: 18px;
+  }
+
+  .profile-hero,
+  .profile-grid,
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

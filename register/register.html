@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Register - TAIKO & U</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="stylesheet" href="/theme/global.css" />
+    <link rel="stylesheet" href="register.css" />
+  </head>
+
+  <body>
+    <div class="register-container">
+      <div class="register-card">
+        <div class="register-header">
+          <h1>TAIKO & U</h1>
+          <p>
+            Daftarkan akun dan data UMKM Anda untuk memulai analisis organisasi.
+          </p>
+        </div>
+
+        <h2>Buat Akun</h2>
+
+        <form onsubmit="handleRegister(event)">
+          <div class="form-group">
+            <label>Nama Pengguna</label>
+            <input
+              id="registerName"
+              type="text"
+              placeholder="Masukkan nama Anda"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Email</label>
+            <input
+              id="registerEmail"
+              type="email"
+              placeholder="Masukkan email"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Password</label>
+            <input
+              id="registerPassword"
+              type="password"
+              placeholder="Buat password"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Nama UMKM</label>
+            <input
+              id="umkmName"
+              type="text"
+              placeholder="Contoh: Kopi Nusantara"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Sektor UMKM</label>
+            <input
+              id="umkmSector"
+              type="text"
+              placeholder="Contoh: Kuliner, Fashion, Jasa"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Role Pengguna</label>
+            <select id="userRole" required>
+              <option value="">Pilih role</option>
+              <option value="owner">Owner / Pemilik UMKM</option>
+              <option value="employee">Karyawan / Tim UMKM</option>
+            </select>
+          </div>
+
+          <small class="form-help">
+            Jika Anda karyawan, pastikan nama UMKM diisi sama seperti yang
+            didaftarkan owner.
+          </small>
+
+          <button type="submit" class="btn-register">Daftar</button>
+        </form>
+
+        <p class="register-note">
+          Sudah punya akun?
+          <a href="../login/login.html">Masuk di sini</a>
+        </p>
+
+        <a href="../landing_page/landing.html" class="back-link">
+          ← Kembali ke Landing Page
+        </a>
+      </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+
+    <script>
+      async function handleRegister(e) {
+        e.preventDefault();
+
+        const name = document.getElementById("registerName").value.trim();
+        const email = document
+          .getElementById("registerEmail")
+          .value.trim()
+          .toLowerCase();
+        const password = document
+          .getElementById("registerPassword")
+          .value.trim();
+        const umkmName = document.getElementById("umkmName").value.trim();
+        const umkmSector = document.getElementById("umkmSector").value.trim();
+        const role = document.getElementById("userRole").value;
+
+        if (!name || !email || !password || !umkmName || !umkmSector || !role) {
+          alert("Semua data wajib diisi.");
+          return;
+        }
+
+        try {
+          const registerResult = await apiRequest("/api/register", "POST", {
+            name,
+            email,
+            password,
+            role,
+          });
+
+          if (!registerResult.success) {
+            alert(registerResult.message || "Registrasi gagal.");
+            return;
+          }
+
+          const loginResult = await apiRequest("/api/login", "POST", {
+            email,
+            password,
+          });
+
+          if (!loginResult.success) {
+            alert(
+              "Akun berhasil dibuat, tapi gagal mengambil data user. Silakan login manual.",
+            );
+            window.location.href = "../login/login.html";
+            return;
+          }
+
+          const user = loginResult.user;
+
+          const umkmResult = await apiRequest("/api/umkm", "POST", {
+            user_id: user.id,
+            nama_umkm: umkmName,
+            pemilik: name,
+            kategori: umkmSector,
+            alamat: "",
+          });
+
+          if (!umkmResult.success) {
+            alert("Akun berhasil dibuat, tapi data UMKM gagal disimpan.");
+            window.location.href = "../login/login.html";
+            return;
+          }
+
+          const activeUser = {
+            id: user.id,
+            user_id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            umkm_id: umkmResult.umkm_id,
+            umkm: {
+              umkm_id: umkmResult.umkm_id,
+              nama_umkm: umkmName,
+              sektor: umkmSector,
+            },
+          };
+
+          localStorage.setItem("isLoggedIn", "true");
+          localStorage.setItem("activeUser", JSON.stringify(activeUser));
+
+          alert(
+            "Registrasi berhasil. Data akun dan UMKM sudah masuk ke database.",
+          );
+          window.location.href = "../beranda/index.html";
+        } catch (error) {
+          console.error(error);
+          alert("Terjadi kesalahan saat menghubungkan ke server.");
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Saran & Rekomendasi - TAIKO & U</title>
+    <link rel="stylesheet" href="/theme/global.css" />
+    <link rel="stylesheet" href="saran_rekomendasi.css" />
+  </head>
+
+  <body>
+    <div class="page">
+      <aside class="sidebar">
+        <div class="brand">
+          <h2>TAIKO & U</h2>
+          <p>Analisis Internal UMKM</p>
+        </div>
+
+        <nav class="menu">
+          <a href="/beranda/index.html">Beranda</a>
+          <a href="/daftar_umkm/daftar_umkm.html">Daftar UMKM</a>
+          <a href="/kuisioner/kuisioner.html">Kuesioner</a>
+          <a href="/detail/detail_analisis.html">Detail Analisis</a>
+          <a class="active" href="/saran_rekomendasi/saran_rekomendasi.html"
+            >Saran & Rekomendasi</a
+          >
+          <a href="/pengaturan/pengaturan.html">Pengaturan</a>
+          <a href="/profil/profil.html">Profil</a>
+        </nav>
+
+        <div class="help-card">
+          <p>Butuh bantuan?</p>
+          <button
+            class="help-btn"
+            onclick="window.location.href = 'mailto:admin@taikou.com'"
+          >
+            Pusat Bantuan
+          </button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <span class="eyebrow">Strategi Perbaikan</span>
+            <h1>Analisis Strategis & Rekomendasi Organisasi</h1>
+            <p id="umkmInfo">Memuat data UMKM...</p>
+          </div>
+        </header>
+
+        <section id="emptyState" class="empty-state" style="display: none">
+          <h2>Belum Ada Data Kuesioner</h2>
+          <p>
+            Isi kuesioner terlebih dahulu agar sistem dapat membuat rekomendasi.
+          </p>
+          <a href="/kuisioner/kuisioner.html">Isi Kuesioner</a>
+        </section>
+
+        <section id="recommendationContent">
+          <div class="recommendation-layout">
+            <section class="main-column">
+              <article id="priorityCard" class="priority-card"></article>
+
+              <div id="factorCards" class="factor-grid"></div>
+
+              <section class="consult-card">
+                <div>
+                  <span class="consult-icon">▣</span>
+                </div>
+                <div>
+                  <h2>Butuh Konsultasi Lanjutan?</h2>
+                  <p>
+                    Diskusikan hasil analisis ini bersama tim untuk menentukan
+                    prioritas perbaikan organisasi yang lebih tepat.
+                  </p>
+                </div>
+                <a href="/detail/detail_analisis.html">Lihat Detail Analisis</a>
+              </section>
+            </section>
+
+            <aside class="side-column">
+              <div class="score-card">
+                <span>Skor Keberlanjutan</span>
+                <h2 id="sustainabilityScore">0%</h2>
+                <p id="scoreDesc">Berdasarkan hasil gabungan kuesioner.</p>
+              </div>
+
+              <div class="audit-card">
+                <span>Waktu Evaluasi</span>
+                <h2 id="auditTime">-</h2>
+                <p id="auditDesc">Menghitung estimasi waktu perbaikan...</p>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="saran_rekomendasi.js"></script>
+  </body>
+</html>

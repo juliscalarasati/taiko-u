@@ -1,0 +1,555 @@
+/* =========================
+   GLOBAL THEME
+========================= */
+
+:root {
+  --primary: #1f8a70;
+  --primary-dark: #176b58;
+  --primary-soft: #dff3ec;
+
+  --bg-main: #f4f7f6;
+  --bg-card: rgba(255,255,255,0.88);
+
+  --text-main: #24343a;
+  --text-soft: #5c6d74;
+
+  --shadow-soft: 0 10px 30px rgba(31,138,112,0.08);
+  --radius-lg: 28px;
+  --radius-md: 18px;
+}
+
+/* =========================
+   BODY BACKGROUND
+========================= */
+
+html,
+body {
+  min-height: 100%;
+  background: transparent !important;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -9999;
+
+  background:
+    radial-gradient(circle at 15% 20%, rgba(31,138,112,0.18), transparent 30%),
+    radial-gradient(circle at 85% 15%, rgba(92,225,195,0.22), transparent 28%),
+    radial-gradient(circle at 75% 80%, rgba(26,110,90,0.15), transparent 35%),
+    radial-gradient(circle at 30% 90%, rgba(120,240,210,0.12), transparent 30%),
+    linear-gradient(
+      135deg,
+      #eefaf5,
+      #f7fcfa,
+      #edf7f3
+    );
+
+  background-size: 250% 250%;
+
+  animation: softGradientMove 18s ease infinite;
+}
+@keyframes softGradientMove {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.dashboard,
+.detail-page,
+.page,
+.main,
+.content,
+.container {
+  background: transparent !important;
+}
+
+
+.sidebar {
+  width: 230px;
+  min-height: 100vh;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(18, 78, 64, 0.96),
+      rgba(26, 110, 90, 0.94)
+    );
+
+  border-right: 1px solid rgba(255,255,255,0.08);
+
+  backdrop-filter: blur(18px);
+
+  box-shadow:
+    10px 0 40px rgba(0,0,0,0.06);
+
+  color: white;
+}
+
+.brand h2 {
+  color: white;
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+
+.brand p {
+  color: rgba(255,255,255,0.75);
+  line-height: 1.5;
+}
+
+.menu a {
+  color: rgba(255,255,255,0.78);
+
+  border-radius: 16px;
+
+  transition: all 0.25s ease;
+}
+
+.menu a:hover {
+  background: rgba(255,255,255,0.08);
+  color: white;
+
+  transform: translateX(4px);
+}
+
+.menu a.active {
+  background: rgba(255,255,255,0.16);
+
+  color: white;
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+/* =========================
+   ANIMATION
+========================= */
+
+@keyframes softGradientMove {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* =========================
+   GLOBAL CARD
+========================= */
+
+.panel,
+.summary-card,
+.stat-card,
+.info-card,
+.umkm-card,
+.table-panel {
+  background: rgba(255,255,255,0.72);
+
+  backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(255,255,255,0.45);
+
+  box-shadow:
+    0 8px 30px rgba(31,138,112,0.08);
+
+  transition: all 0.25s ease;
+}
+
+.panel:hover,
+.summary-card:hover {
+  transform: translateY(-3px);
+
+  box-shadow:
+    0 18px 40px rgba(31,138,112,0.12);
+}
+
+/* =========================
+   BUTTON
+========================= */
+
+button,
+.btn,
+.recommendation-btn {
+  border: none;
+  cursor: pointer;
+
+  background: var(--primary);
+  color: white;
+
+  transition: all 0.2s ease;
+}
+
+button:hover,
+.btn:hover,
+.recommendation-btn:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+/* =========================
+   SCROLLBAR
+========================= */
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #edf3f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #b7d9cf;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8fcab9;
+}
+
+@keyframes softGradientMove {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.panel,
+.summary-card,
+.stat-card,
+.info-card,
+.umkm-card,
+.table-panel,
+.insight-card {
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: blur(14px);
+
+  border: 1px solid rgba(255,255,255,0.5);
+
+  box-shadow:
+    0 10px 30px rgba(31,138,112,0.08);
+
+  transition: all 0.25s ease;
+}
+
+.panel:hover,
+.summary-card:hover,
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.panel,
+.summary-card,
+.stat-card,
+.info-card,
+.umkm-card,
+.table-panel {
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: blur(14px);
+
+  border: 1px solid rgba(255,255,255,0.5);
+
+  box-shadow:
+    0 10px 30px rgba(31,138,112,0.08);
+}
+
+/* FORCE GLOBAL THEME */
+
+/* Glass card */
+.panel,
+.summary-card,
+.stat-card,
+.user-info-card,
+.notif,
+.umkm-card,
+.empty-state,
+.table-panel {
+  background: rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.55) !important;
+  box-shadow: 0 18px 45px rgba(31, 138, 112, 0.12) !important;
+}
+
+/* Sidebar gradient */
+.sidebar {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(20, 94, 76, 0.96),
+      rgba(31, 138, 112, 0.92)
+    ) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 12px 0 40px rgba(31, 138, 112, 0.18) !important;
+}
+
+/* Brand sidebar */
+.sidebar .brand h2 {
+  color: #ffffff !important;
+}
+
+.sidebar .brand p {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+/* Menu sidebar */
+.sidebar .menu a {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+.sidebar .menu a:hover,
+.sidebar .menu a.active {
+  background: rgba(255, 255, 255, 0.16) !important;
+  color: #ffffff !important;
+  transform: translateX(4px);
+}
+
+/* Main area transparent */
+.dashboard,
+.detail-page,
+.page,
+.main {
+  background: transparent !important;
+}
+
+.topbar {
+  background: rgba(255,255,255,0.45);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  border: 1px solid rgba(255,255,255,0.4);
+
+  border-radius: 28px;
+
+  padding: 28px;
+
+  box-shadow:
+    0 10px 30px rgba(31,138,112,0.08);
+}
+
+.chart-wrapper,
+.radar-wrapper,
+.boxplot-wrapper {
+  background: rgba(255,255,255,0.35);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  border-radius: 24px;
+
+  padding: 20px;
+
+  border: 1px solid rgba(255,255,255,0.35);
+}
+
+table {
+  background: rgba(255,255,255,0.45);
+
+  backdrop-filter: blur(10px);
+
+  border-radius: 18px;
+
+  overflow: hidden;
+}
+
+thead {
+  background: rgba(31,138,112,0.08);
+}
+
+button,
+.btn,
+a.button {
+  background: rgba(31,138,112,0.85);
+
+  backdrop-filter: blur(10px);
+
+  border: 1px solid rgba(255,255,255,0.25);
+
+  box-shadow:
+    0 8px 18px rgba(31,138,112,0.18);
+
+  transition: all 0.25s ease;
+}
+
+button:hover,
+.btn:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 14px 28px rgba(31,138,112,0.28);
+}
+
+.insight-card {
+  background: rgba(255,255,255,0.42);
+
+  backdrop-filter: blur(12px);
+
+  border: 1px solid rgba(255,255,255,0.35);
+
+  box-shadow:
+    0 10px 24px rgba(31,138,112,0.08);
+}
+
+.panel,
+.summary-card,
+.insight-card,
+.table-panel {
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.panel:hover,
+.summary-card:hover,
+.insight-card:hover {
+  transform: translateY(-4px);
+
+  box-shadow:
+    0 20px 40px rgba(31,138,112,0.16);
+}
+
+body::after {
+  content: "";
+
+  position: fixed;
+
+  width: 500px;
+  height: 500px;
+
+  right: -150px;
+  bottom: -150px;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(31,138,112,0.16),
+      transparent 70%
+    );
+
+  z-index: -1;
+
+  filter: blur(40px);
+}
+
+/* ===== PREMIUM SIDEBAR BRAND ===== */
+
+.sidebar .brand {
+  position: relative;
+
+  padding: 28px 22px;
+
+  margin-bottom: 34px;
+
+  border-radius: 26px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,0.14),
+      rgba(255,255,255,0.04)
+    );
+
+  backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(255,255,255,0.16);
+
+  box-shadow:
+    0 14px 32px rgba(0,0,0,0.14),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+
+  overflow: hidden;
+}
+
+/* glow atas */
+.sidebar .brand::before {
+  content: "";
+
+  position: absolute;
+
+  top: -60px;
+  right: -60px;
+
+  width: 140px;
+  height: 140px;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(255,255,255,0.22),
+      transparent 70%
+    );
+
+  pointer-events: none;
+}
+
+/* logo/title */
+.sidebar .brand h2 {
+  font-size: 2.5rem !important;
+
+  font-weight: 900;
+
+  letter-spacing: -2px;
+
+  color: white !important;
+
+  margin-bottom: 14px;
+
+  line-height: 1;
+}
+
+/* subtitle */
+.sidebar .brand p {
+  color: rgba(255,255,255,0.92) !important;
+
+  font-size: 1rem;
+
+  line-height: 1.7;
+
+  font-weight: 500;
+
+  max-width: 220px;
+}
+
+/* accent line */
+.sidebar .brand::after {
+  content: "";
+
+  position: absolute;
+
+  left: 22px;
+  bottom: 18px;
+
+  width: 54px;
+  height: 4px;
+
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #ffffff,
+      rgba(255,255,255,0.2)
+    );
+}
