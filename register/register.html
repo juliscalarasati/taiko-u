@@ -83,10 +83,13 @@
 
           <small class="form-help">
             Jika Anda karyawan, pastikan nama UMKM diisi sama seperti yang
-            didaftarkan owner.
+            didaftarkan owner. Sistem akan otomatis menghubungkan ke UMKM yang
+            sudah ada.
           </small>
 
-          <button type="submit" class="btn-register">Daftar</button>
+          <button id="registerButton" type="submit" class="btn-register">
+            Daftar
+          </button>
         </form>
 
         <p class="register-note">
@@ -106,6 +109,10 @@
       async function handleRegister(e) {
         e.preventDefault();
 
+        const button = document.getElementById("registerButton");
+        button.disabled = true;
+        button.textContent = "Mendaftarkan...";
+
         const name = document.getElementById("registerName").value.trim();
         const email = document
           .getElementById("registerEmail")
@@ -120,6 +127,8 @@
 
         if (!name || !email || !password || !umkmName || !umkmSector || !role) {
           alert("Semua data wajib diisi.");
+          button.disabled = false;
+          button.textContent = "Daftar";
           return;
         }
 
@@ -129,41 +138,20 @@
             email,
             password,
             role,
+            nama_umkm: umkmName,
+            kategori: umkmSector,
+            pemilik: role === "owner" ? name : "",
+            alamat: "",
           });
 
           if (!registerResult.success) {
             alert(registerResult.message || "Registrasi gagal.");
+            button.disabled = false;
+            button.textContent = "Daftar";
             return;
           }
 
-          const loginResult = await apiRequest("/api/login", "POST", {
-            email,
-            password,
-          });
-
-          if (!loginResult.success) {
-            alert(
-              "Akun berhasil dibuat, tapi gagal mengambil data user. Silakan login manual.",
-            );
-            window.location.href = "../login/login.html";
-            return;
-          }
-
-          const user = loginResult.user;
-
-          const umkmResult = await apiRequest("/api/umkm", "POST", {
-            user_id: user.id,
-            nama_umkm: umkmName,
-            pemilik: name,
-            kategori: umkmSector,
-            alamat: "",
-          });
-
-          if (!umkmResult.success) {
-            alert("Akun berhasil dibuat, tapi data UMKM gagal disimpan.");
-            window.location.href = "../login/login.html";
-            return;
-          }
+          const user = registerResult.user;
 
           const activeUser = {
             id: user.id,
@@ -171,24 +159,27 @@
             name: user.name,
             email: user.email,
             role: user.role,
-            umkm_id: umkmResult.umkm_id,
+            umkm_id: user.umkm_id,
             umkm: {
-              umkm_id: umkmResult.umkm_id,
-              nama_umkm: umkmName,
-              sektor: umkmSector,
+              umkm_id: user.umkm_id,
+              nama_umkm: user.umkm?.nama_umkm || umkmName,
+              sektor: user.umkm?.sektor || umkmSector,
             },
           };
 
+          localStorage.removeItem("selectedUmkm");
+          localStorage.removeItem("previewAssessments");
           localStorage.setItem("isLoggedIn", "true");
           localStorage.setItem("activeUser", JSON.stringify(activeUser));
+          localStorage.setItem("selectedUmkm", JSON.stringify(activeUser.umkm));
 
-          alert(
-            "Registrasi berhasil. Data akun dan UMKM sudah masuk ke database.",
-          );
+          alert(registerResult.message || "Registrasi berhasil.");
           window.location.href = "../beranda/index.html";
         } catch (error) {
           console.error(error);
           alert("Terjadi kesalahan saat menghubungkan ke server.");
+          button.disabled = false;
+          button.textContent = "Daftar";
         }
       }
     </script>

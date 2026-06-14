@@ -40,7 +40,9 @@
             />
           </div>
 
-          <button type="submit" class="btn-login">Masuk</button>
+          <button id="loginButton" type="submit" class="btn-login">
+            Masuk
+          </button>
         </form>
 
         <p class="login-note">
@@ -60,6 +62,10 @@
       async function handleLogin(e) {
         e.preventDefault();
 
+        const button = document.getElementById("loginButton");
+        button.disabled = true;
+        button.textContent = "Masuk...";
+
         const email = document
           .getElementById("loginEmail")
           .value.trim()
@@ -68,6 +74,8 @@
 
         if (!email || !password) {
           alert("Email dan password wajib diisi.");
+          button.disabled = false;
+          button.textContent = "Masuk";
           return;
         }
 
@@ -79,24 +87,12 @@
 
           if (!loginResult.success) {
             alert(loginResult.message || "Email atau password salah.");
+            button.disabled = false;
+            button.textContent = "Masuk";
             return;
           }
 
           const user = loginResult.user;
-
-          let userUmkm = null;
-
-          try {
-            const umkmResult = await apiRequest("/api/umkm");
-
-            if (umkmResult.success && Array.isArray(umkmResult.data)) {
-              userUmkm = umkmResult.data.find(
-                (item) => item.user_id == user.id,
-              );
-            }
-          } catch (error) {
-            console.error("Gagal mengambil data UMKM:", error);
-          }
 
           const activeUser = {
             id: user.id,
@@ -104,22 +100,30 @@
             name: user.name,
             email: user.email,
             role: user.role,
-            umkm_id: userUmkm ? userUmkm.id : null,
+            umkm_id: user.umkm_id || null,
             umkm: {
-              umkm_id: userUmkm ? userUmkm.id : null,
-              nama_umkm: userUmkm ? userUmkm.nama_umkm : "UMKM belum tersedia",
-              sektor: userUmkm ? userUmkm.kategori : "Sektor belum tersedia",
+              umkm_id: user.umkm_id || null,
+              nama_umkm: user.umkm?.nama_umkm || "UMKM belum tersedia",
+              sektor: user.umkm?.sektor || "Sektor belum tersedia",
             },
           };
 
+          localStorage.removeItem("selectedUmkm");
+          localStorage.removeItem("previewAssessments");
           localStorage.setItem("isLoggedIn", "true");
           localStorage.setItem("activeUser", JSON.stringify(activeUser));
+
+          if (activeUser.umkm_id) {
+            localStorage.setItem("selectedUmkm", JSON.stringify(activeUser.umkm));
+          }
 
           alert("Login berhasil!");
           window.location.href = "../beranda/index.html";
         } catch (error) {
           console.error(error);
           alert("Terjadi kesalahan saat menghubungkan ke server.");
+          button.disabled = false;
+          button.textContent = "Masuk";
         }
       }
     </script>

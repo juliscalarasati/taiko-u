@@ -18,7 +18,18 @@ async function apiRequest(endpoint, method = "GET", body = null) {
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
-    const data = await response.json();
+
+    let data = {};
+    const text = await response.text();
+
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = {
+        success: false,
+        message: text || "Response server tidak valid.",
+      };
+    }
 
     if (!response.ok) {
       return {
