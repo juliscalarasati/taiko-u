@@ -7,10 +7,14 @@ const factorInfo = {
   ECT: { full: "Economic Performance", id: "Kinerja Ekonomi" },
 };
 
+let factorChartInstance = null;
+let radarChartInstance = null;
+let boxplotChartInstance = null;
+
 document.addEventListener("DOMContentLoaded", async () => {
   const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-  const activeUser = JSON.parse(localStorage.getItem("activeUser"));
-  const selectedUmkm = JSON.parse(localStorage.getItem("selectedUmkm"));
+  const activeUser = safeJsonParse(localStorage.getItem("activeUser"));
+  const selectedUmkm = safeJsonParse(localStorage.getItem("selectedUmkm"));
 
   if (!isLoggedIn || !activeUser) {
     alert("Silakan login terlebih dahulu untuk melihat detail analisis.");
@@ -18,25 +22,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // Ini yang penting:
-  // Kalau masuk dari Daftar UMKM, pakai selectedUmkm.
-  // Kalau masuk dari Beranda akun sendiri, baru fallback ke activeUser.umkm.
-  const targetUmkm = selectedUmkm || activeUser.umkm;
+  const targetUmkm = resolveTargetUmkm(selectedUmkm, activeUser);
 
-  if (!targetUmkm) {
-    alert("UMKM belum dipilih.");
-    window.location.href = "../daftar_umkm/daftar_umkm.html";
+  if (!targetUmkm || !getUmkmName(targetUmkm)) {
+    showEmptyState(
+      "UMKM Belum Tersedia",
+      "Akun ini belum terhubung ke data UMKM. Silakan daftar atau login ulang.",
+      "../daftar_umkm/daftar_umkm.html",
+      "Ke Daftar UMKM"
+    );
     return;
   }
+
+  localStorage.setItem("selectedUmkm", JSON.stringify(targetUmkm));
 
   try {
     const assessmentResult = await apiRequest("/api/assessments");
     const boxplotResult = await apiRequest("/api/boxplot");
 
     if (!assessmentResult.success) {
-      throw new Error(
-        assessmentResult.message || "Gagal mengambil data assessment."
-      );
+      throw new Error(assessmentResult.message || "Gagal mengambil data assessment.");
     }
 
     if (!boxplotResult.success) {
@@ -44,132 +49,124 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const allAssessments = assessmentResult.data || [];
+    const relatedAssessments = getRelatedAssessments(targetUmkm, allAssessments);
 
-    const targetUmkmId =
-      targetUmkm.umkm_id ||
-      targetUmkm.id ||
-      targetUmkm.umkm?.umkm_id ||
-      targetUmkm.umkm?.id;
+    setText("umkmInfo", `${getUmkmName(targetUmkm)} · ${getUmkmSector(targetUmkm)}`);
 
-    const targetUmkmName = normalizeText(
-      targetUmkm.nama_umkm ||
-      targetUmkm.umkm?.nama_umkm
-    );
-
-    const targetSector =
-      targetUmkm.sektor ||
-      targetUmkm.kategori ||
-      targetUmkm.umkm?.sektor ||
-      targetUmkm.umkm?.kategori ||
-      "Sektor belum tersedia";
-
-    const sameUmkmAssessments = allAssessments.filter((item) => {
-      return (
-        item.umkm_id == targetUmkmId ||
-        normalizeText(item.nama_umkm) === targetUmkmName
+    if (!relatedAssessments.length) {
+      showEmptyState(
+        "UMKM Ini Belum Dinilai",
+        `Belum ada hasil kuesioner untuk ${getUmkmName(targetUmkm)}.`,
+        "../kuisioner/kuisioner.html",
+        "Isi Kuesioner"
       );
-    });
-
-    document.getElementById("umkmInfo").textContent =
-      `${targetUmkm.nama_umkm || targetUmkm.umkm?.nama_umkm || "UMKM"} · ${targetSector}`;
-
-    if (!sameUmkmAssessments.length) {
-      document.getElementById("analysisContent").style.display = "none";
-      document.getElementById("emptyState").style.display = "block";
-
-      document.getElementById("emptyState").innerHTML = `
-        <h2>UMKM Ini Belum Dinilai</h2>
-        <p>Belum ada hasil kuesioner untuk ${
-          targetUmkm.nama_umkm || targetUmkm.umkm?.nama_umkm || "UMKM ini"
-        }.</p>
-        <a href="../daftar_umkm/daftar_umkm.html">Kembali ke Daftar UMKM</a>
-      `;
       return;
     }
 
-    const formattedAssessments = sameUmkmAssessments.map((item) =>
+    const formattedAssessments = relatedAssessments.map((item) =>
       convertDatabaseAssessment(item, activeUser, targetUmkm)
     );
 
-    const combinedResult = calculateCombinedResult(formattedAssessments);
+    const validAssessments = formattedAssessments.filter(
+      (item) => Number(item.total_average_score) > 0
+    );
+
+    if (!validAssessments.length) {
+      showEmptyState(
+        "Data Belum Lengkap",
+        `Hasil kuesioner untuk ${getUmkmName(targetUmkm)} belum memiliki skor valid.`,
+        "../kuisioner/kuisioner.html",
+        "Isi Kuesioner"
+      );
+      return;
+    }
+
+    const combinedResult = calculateCombinedResult(validAssessments);
     const benchmarkBoxplotData = convertBoxplotApiData(boxplotResult.factors);
 
-    renderSummary(combinedResult, formattedAssessments);
+    renderSummary(combinedResult, validAssessments);
     renderFactorChart(combinedResult.factor_scores);
     renderRadarChart(combinedResult.factor_scores);
     renderBenchmarkBoxplot(combinedResult.factor_scores, benchmarkBoxplotData);
     renderBenchmarkInsight(combinedResult.factor_scores);
-    renderInsights(combinedResult);
-    renderAssessmentTable(formattedAssessments);
-
-    console.log("Detail assessment dari API:", {
-      targetUmkm,
-      targetUmkmId,
-      targetUmkmName,
-      allAssessments,
-      sameUmkmAssessments,
-      formattedAssessments,
-      combinedResult,
-      benchmarkBoxplotData,
-    });
+    renderInsights(combinedResult, validAssessments);
+    renderAssessmentTable(validAssessments);
   } catch (error) {
     console.error("Error detail analisis:", error);
-    document.getElementById("analysisContent").style.display = "none";
-    document.getElementById("emptyState").style.display = "block";
-    document.getElementById("emptyState").innerHTML = `
-      <h2>Gagal Memuat Detail Analisis</h2>
-      <p>${error.message}</p>
-      <a href="../beranda/index.html">Kembali ke Beranda</a>
-    `;
+
+    showEmptyState(
+      "Gagal Memuat Detail Analisis",
+      error.message,
+      "../beranda/index.html",
+      "Kembali ke Beranda"
+    );
   }
 });
 
+function resolveTargetUmkm(selectedUmkm, activeUser) {
+  if (selectedUmkm && getUmkmName(selectedUmkm)) {
+    return normalizeUmkmObject(selectedUmkm);
+  }
+
+  if (activeUser?.umkm && getUmkmName(activeUser.umkm)) {
+    return normalizeUmkmObject(activeUser.umkm);
+  }
+
+  if (activeUser?.umkm_id && activeUser?.nama_umkm) {
+    return normalizeUmkmObject(activeUser);
+  }
+
+  return null;
+}
+
+function normalizeUmkmObject(umkm) {
+  return {
+    umkm_id: umkm.umkm_id || umkm.id || umkm.umkm?.umkm_id || umkm.umkm?.id || null,
+    id: umkm.id || umkm.umkm_id || umkm.umkm?.id || umkm.umkm?.umkm_id || null,
+    nama_umkm:
+      umkm.nama_umkm || umkm.umkm?.nama_umkm || umkm.name || "UMKM belum tersedia",
+    sektor:
+      umkm.sektor ||
+      umkm.kategori ||
+      umkm.umkm?.sektor ||
+      umkm.umkm?.kategori ||
+      "Sektor belum tersedia",
+    kategori:
+      umkm.kategori ||
+      umkm.sektor ||
+      umkm.umkm?.kategori ||
+      umkm.umkm?.sektor ||
+      "Sektor belum tersedia",
+    pemilik: umkm.pemilik || umkm.umkm?.pemilik || "-",
+    alamat: umkm.alamat || umkm.umkm?.alamat || "-",
+  };
+}
+
+function getRelatedAssessments(targetUmkm, assessments) {
+  const targetUmkmId = targetUmkm.umkm_id || targetUmkm.id;
+  const targetUmkmName = normalizeText(getUmkmName(targetUmkm));
+
+  return assessments.filter((item) => {
+    return item.umkm_id == targetUmkmId || normalizeText(item.nama_umkm) === targetUmkmName;
+  });
+}
+
 function convertDatabaseAssessment(item, activeUser, targetUmkm) {
-  let answers = item.answers;
-
-  if (typeof answers === "string") {
-    try {
-      answers = JSON.parse(answers);
-    } catch {
-      answers = [];
-    }
-  }
-
-  if (!Array.isArray(answers)) {
-    answers = [];
-  }
-
-  const role =
-    item.user_role ||
-    item.role ||
-    activeUser.role ||
-    "owner";
-
-  const normalizedRole =
-    role === "employee" || role === "karyawan" ? "employee" : "owner";
-
-  const factorScores = calculateFactorScoresFromAnswers(answers, normalizedRole);
+  const answers = parseAnswers(item.answers);
+  const role = normalizeRole(item.user_role || item.role || activeUser.role);
+  const factorScores = calculateFactorScoresFromAnswers(answers, role);
 
   const totalAverageScore = average(
-    Object.values(factorScores).filter((score) => score > 0)
+    Object.values(factorScores).filter((score) => Number(score) > 0)
   );
 
   return {
     assessment_id: item.id,
     user_id: item.user_id,
-    user_name:
-      item.user_name ||
-      item.name ||
-      item.pemilik ||
-      targetUmkm.pemilik ||
-      activeUser.name ||
-      "User",
-    user_role: normalizedRole,
-    umkm_id: item.umkm_id,
-    nama_umkm:
-      item.nama_umkm ||
-      targetUmkm.nama_umkm ||
-      targetUmkm.umkm?.nama_umkm,
+    user_name: item.user_name || item.name || activeUser.name || "User",
+    user_role: role,
+    umkm_id: item.umkm_id || targetUmkm.umkm_id || targetUmkm.id,
+    nama_umkm: item.nama_umkm || getUmkmName(targetUmkm),
     assessment_date: item.created_at,
     answers,
     factor_scores: factorScores,
@@ -218,6 +215,7 @@ function convertBoxplotApiData(factors) {
 function calculateCombinedResult(assessments) {
   const factors = ["OV", "LDI", "INS", "OPS", "WEQ", "ECT"];
   const factorScores = {};
+  const factorCounts = {};
 
   factors.forEach((factor) => {
     const values = assessments
@@ -225,6 +223,7 @@ function calculateCombinedResult(assessments) {
       .filter((value) => !isNaN(value) && value > 0);
 
     factorScores[factor] = average(values);
+    factorCounts[factor] = values.length;
   });
 
   const validScores = Object.values(factorScores).filter((score) => score > 0);
@@ -233,26 +232,28 @@ function calculateCombinedResult(assessments) {
 
   return {
     factor_scores: factorScores,
+    factor_counts: factorCounts,
     total_average_score: totalAverage,
     category,
   };
 }
 
 function renderSummary(result, assessments) {
-  document.getElementById("respondentCount").textContent = assessments.length;
-  document.getElementById("averageScore").textContent =
-    result.total_average_score.toFixed(2);
-  document.getElementById("categoryResult").textContent = result.category;
+  setText("respondentCount", assessments.length);
+  setText("averageScore", result.total_average_score.toFixed(2));
+  setText("categoryResult", result.category);
 }
 
 function renderFactorChart(factorScores) {
   const ctx = document.getElementById("factorResultChart");
   if (!ctx) return;
 
-  const labels = Object.keys(factorScores);
-  const values = Object.values(factorScores);
+  if (factorChartInstance) factorChartInstance.destroy();
 
-  new Chart(ctx, {
+  const labels = ["OV", "LDI", "INS", "OPS", "WEQ", "ECT"];
+  const values = labels.map((label) => Number(factorScores[label] || 0));
+
+  factorChartInstance = new Chart(ctx, {
     type: "bar",
     data: {
       labels,
@@ -272,6 +273,14 @@ function renderFactorChart(factorScores) {
       maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const value = Number(context.raw || 0);
+              return value > 0 ? `Skor: ${value.toFixed(2)}` : "Belum ada data";
+            },
+          },
+        },
       },
       scales: {
         y: {
@@ -290,10 +299,12 @@ function renderRadarChart(factorScores) {
   const ctx = document.getElementById("radarChart");
   if (!ctx) return;
 
+  if (radarChartInstance) radarChartInstance.destroy();
+
   const labels = ["OV", "LDI", "INS", "OPS", "WEQ", "ECT"];
   const values = labels.map((label) => Number(factorScores[label] || 0));
 
-  new Chart(ctx, {
+  radarChartInstance = new Chart(ctx, {
     type: "radar",
     data: {
       labels,
@@ -332,9 +343,11 @@ function renderBenchmarkBoxplot(userFactorScores, benchmarkBoxplotData) {
   const ctx = document.getElementById("factorBoxplotChart");
   if (!ctx) return;
 
+  if (boxplotChartInstance) boxplotChartInstance.destroy();
+
   const labels = ["OV", "LDI", "INS", "OPS", "WEQ", "ECT"];
 
-  new Chart(ctx, {
+  boxplotChartInstance = new Chart(ctx, {
     type: "boxplot",
     data: {
       labels,
@@ -351,10 +364,12 @@ function renderBenchmarkBoxplot(userFactorScores, benchmarkBoxplotData) {
         {
           type: "scatter",
           label: "Skor UMKM Ini",
-          data: labels.map((key) => ({
-            x: key,
-            y: Number(userFactorScores[key] || 0),
-          })),
+          data: labels
+            .filter((key) => Number(userFactorScores[key]) > 0)
+            .map((key) => ({
+              x: key,
+              y: Number(userFactorScores[key]),
+            })),
           backgroundColor: "#0b4f45",
           borderColor: "#0b4f45",
           pointRadius: 6,
@@ -385,11 +400,16 @@ function renderBenchmarkInsight(userFactorScores) {
   const insightEl = document.getElementById("benchmarkInsight");
   if (!insightEl) return;
 
-  const entries = Object.entries(userFactorScores).filter(
-    ([, score]) => Number(score) > 0
-  );
+  const entries = Object.entries(userFactorScores).filter(([, score]) => Number(score) > 0);
 
-  if (!entries.length) return;
+  if (!entries.length) {
+    insightEl.innerHTML = `
+      <div class="analysis-action">
+        Data faktor belum cukup untuk dibandingkan dengan benchmark.
+      </div>
+    `;
+    return;
+  }
 
   const highest = entries.reduce((a, b) => (b[1] > a[1] ? b : a));
   const lowest = entries.reduce((a, b) => (b[1] < a[1] ? b : a));
@@ -426,16 +446,20 @@ function renderBenchmarkInsight(userFactorScores) {
   `;
 }
 
-function renderInsights(result) {
+function renderInsights(result, assessments) {
   const insightBox = document.getElementById("insightBox");
-  const scores = result.factor_scores;
+  if (!insightBox) return;
 
-  const entries = Object.entries(scores).filter(([, score]) => score > 0);
+  const scores = result.factor_scores;
+  const entries = Object.entries(scores).filter(([, score]) => Number(score) > 0);
 
   if (!entries.length) {
     insightBox.innerHTML = `<div class="analysis-action">Data faktor belum tersedia.</div>`;
     return;
   }
+
+  const ownerFilled = assessments.some((item) => item.user_role === "owner");
+  const employeeFilled = assessments.some((item) => item.user_role === "employee");
 
   const values = entries.map(([, score]) => Number(score));
   const highest = Math.max(...values);
@@ -492,6 +516,12 @@ function renderInsights(result) {
     </div>
 
     <div class="analysis-action">
+      <b>Kelengkapan Data</b><br>
+      Owner: <b>${ownerFilled ? "Sudah isi" : "Belum isi"}</b><br>
+      Karyawan: <b>${employeeFilled ? "Sudah isi" : "Belum isi"}</b>
+    </div>
+
+    <div class="analysis-action">
       <b>Saran Strategi</b><br>
       Fokus perbaikan dapat dimulai dari faktor dengan skor paling rendah, lalu dilakukan evaluasi ulang melalui kuesioner berikutnya.
     </div>
@@ -508,6 +538,7 @@ function renderInsights(result) {
 
 function renderAssessmentTable(assessments) {
   const table = document.getElementById("assessmentTable");
+  if (!table) return;
 
   table.innerHTML = assessments
     .map((item) => {
@@ -520,16 +551,65 @@ function renderAssessmentTable(assessments) {
       const category = item.category || calculateCategory(Number(score));
 
       return `
-      <tr>
-        <td>${item.user_name || "User"}</td>
-        <td><span class="badge">${role}</span></td>
-        <td>${date}</td>
-        <td>${score}</td>
-        <td>${category}</td>
-      </tr>
-    `;
+        <tr>
+          <td>${escapeHtml(item.user_name || "User")}</td>
+          <td><span class="badge">${escapeHtml(role)}</span></td>
+          <td>${escapeHtml(date)}</td>
+          <td>${escapeHtml(score)}</td>
+          <td>${escapeHtml(category)}</td>
+        </tr>
+      `;
     })
     .join("");
+}
+
+function showEmptyState(title, message, href, linkText) {
+  const analysisContent = document.getElementById("analysisContent");
+  const emptyState = document.getElementById("emptyState");
+
+  if (analysisContent) analysisContent.style.display = "none";
+
+  if (emptyState) {
+    emptyState.style.display = "block";
+    emptyState.innerHTML = `
+      <h2>${escapeHtml(title)}</h2>
+      <p>${escapeHtml(message)}</p>
+      <a href="${href}">${escapeHtml(linkText)}</a>
+    `;
+  }
+}
+
+function getUmkmName(umkm) {
+  return umkm?.nama_umkm || umkm?.umkm?.nama_umkm || "";
+}
+
+function getUmkmSector(umkm) {
+  return (
+    umkm?.sektor ||
+    umkm?.kategori ||
+    umkm?.umkm?.sektor ||
+    umkm?.umkm?.kategori ||
+    "Sektor belum tersedia"
+  );
+}
+
+function parseAnswers(rawAnswers) {
+  if (typeof rawAnswers === "string") {
+    try {
+      const parsed = JSON.parse(rawAnswers);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  return Array.isArray(rawAnswers) ? rawAnswers : [];
+}
+
+function normalizeRole(role) {
+  const value = normalizeText(role);
+  if (value === "employee" || value === "karyawan") return "employee";
+  return "owner";
 }
 
 function calculateCategory(score) {
@@ -550,4 +630,26 @@ function normalizeText(text) {
 function average(arr) {
   if (!arr || !arr.length) return 0;
   return arr.reduce((sum, value) => sum + Number(value || 0), 0) / arr.length;
+}
+
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
+function safeJsonParse(value) {
+  try {
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }

@@ -453,10 +453,31 @@ nextBtn.addEventListener("click", async () => {
 
     const answersArray = createAnswersArrayFromAssessment(assessmentResult);
 
+    const activeUmkm = {
+      umkm_id: activeUser.umkm_id || activeUser.umkm?.umkm_id,
+      id: activeUser.umkm_id || activeUser.umkm?.umkm_id,
+      nama_umkm:
+        activeUser.umkm?.nama_umkm ||
+        activeUser.nama_umkm ||
+        assessmentResult.nama_umkm,
+      sektor:
+        activeUser.umkm?.sektor ||
+        activeUser.umkm?.kategori ||
+        assessmentResult.sektor,
+      kategori:
+        activeUser.umkm?.kategori ||
+        activeUser.umkm?.sektor ||
+        assessmentResult.sektor,
+      pemilik: activeUser.umkm?.pemilik || activeUser.name || "-",
+      alamat: activeUser.umkm?.alamat || "-",
+    };
+
     const saveResult = await apiRequest("/api/assessments", "POST", {
       user_id: activeUser.user_id || activeUser.id,
-      umkm_id: activeUser.umkm_id || activeUser.umkm?.umkm_id,
-      nama_umkm: activeUser.umkm?.nama_umkm || assessmentResult.nama_umkm,
+      user_name: activeUser.name,
+      user_role: activeUser.role,
+      umkm_id: activeUmkm.umkm_id,
+      nama_umkm: activeUmkm.nama_umkm,
       answers: answersArray,
     });
 
@@ -495,7 +516,7 @@ nextBtn.addEventListener("click", async () => {
     localStorage.setItem("assessments", JSON.stringify(filteredAssessments));
     localStorage.setItem("latestAssessment", JSON.stringify(assessmentResult));
     localStorage.setItem("assessmentCompleted", "true");
-    localStorage.removeItem("selectedUmkm");
+    localStorage.setItem("selectedUmkm", JSON.stringify(activeUmkm));
     localStorage.removeItem("previewAssessments");
     localStorage.removeItem(answerKey);
 
@@ -618,8 +639,12 @@ function validateBackendPayload(payload, role) {
 }
 
 function createAnswersArrayFromAssessment(assessmentResult) {
-  return Object.values(assessmentResult.answers)
-    .map((answer) => convertAnswerToScore(answer))
+  const orderedQuestionIds = sections.flatMap((section) =>
+    section.questions.map((question) => question.id),
+  );
+
+  return orderedQuestionIds
+    .map((id) => convertAnswerToScore(assessmentResult.answers[id]))
     .filter((score) => score !== null && score > 0);
 }
 
