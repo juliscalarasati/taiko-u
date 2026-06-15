@@ -1,31 +1,93 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-  const activeUser = JSON.parse(localStorage.getItem("activeUser"));
-  const users = JSON.parse(localStorage.getItem("users")) || [];
-  const assessments = JSON.parse(localStorage.getItem("assessments")) || [];
+  const activeUser = safeJsonParse(localStorage.getItem("activeUser"));
 
   if (!isLoggedIn || !activeUser) {
-    document.getElementById("settingContent").style.display = "none";
-    document.getElementById("guestState").style.display = "block";
+    const settingContent = document.getElementById("settingContent");
+    const guestState = document.getElementById("guestState");
+
+    if (settingContent) settingContent.style.display = "none";
+    if (guestState) guestState.style.display = "block";
+
     return;
   }
 
-  const roleLabel = activeUser.role === "owner"
-    ? "Owner / Pemilik UMKM"
-    : "Karyawan / Tim UMKM";
+  const userRole = normalizeRole(activeUser.role);
+  const roleLabel =
+    userRole === "owner" ? "Owner / Pemilik UMKM" : "Karyawan / Tim UMKM";
 
-  document.getElementById("userName").textContent = activeUser.name;
-  document.getElementById("userEmail").textContent = activeUser.email;
-  document.getElementById("userRole").textContent = roleLabel;
+  const userUmkm = getUserUmkm(activeUser);
 
-  document.getElementById("umkmName").textContent = activeUser.umkm.nama_umkm;
-  document.getElementById("umkmSector").textContent = activeUser.umkm.sektor;
-  document.getElementById("umkmId").textContent = activeUser.umkm_id || activeUser.umkm.umkm_id;
+  setText("userName", activeUser.name || "-");
+  setText("userEmail", activeUser.email || "-");
+  setText("userRole", roleLabel);
 
-  document.getElementById("totalUsers").textContent = users.length;
-  document.getElementById("totalAssessments").textContent = assessments.length;
-  document.getElementById("loginStatus").textContent = "Aktif";
+  setText("umkmName", userUmkm.nama_umkm || "-");
+  setText("umkmSector", userUmkm.sektor || userUmkm.kategori || "-");
+  setText("umkmId", userUmkm.umkm_id || userUmkm.id || "-");
+
+  setText("totalUsers", "1");
+  setText("loginStatus", "Aktif");
+
+  await loadAssessmentStatus(userUmkm);
 });
+
+async function loadAssessmentStatus(userUmkm) {
+  try {
+    if (typeof apiRequest !== "function") {
+      setText("totalAssessments", "0");
+      return;
+    }
+
+    const result = await apiRequest("/api/assessments");
+
+    if (!result.success || !Array.isArray(result.data)) {
+      setText("totalAssessments", "0");
+      return;
+    }
+
+    const targetUmkmId = userUmkm.umkm_id || userUmkm.id;
+    const targetUmkmName = normalizeText(userUmkm.nama_umkm);
+
+    const relatedAssessments = result.data.filter((item) => {
+      return (
+        item.umkm_id == targetUmkmId ||
+        normalizeText(item.nama_umkm) === targetUmkmName
+      );
+    });
+
+    setText("totalAssessments", relatedAssessments.length);
+  } catch (error) {
+    console.warn("Gagal mengambil status assessment:", error);
+    setText("totalAssessments", "0");
+  }
+}
+
+function getUserUmkm(activeUser) {
+  const umkm = activeUser.umkm || {};
+
+  return {
+    umkm_id: activeUser.umkm_id || umkm.umkm_id || umkm.id || activeUser.id_umkm || null,
+    id: activeUser.umkm_id || umkm.id || umkm.umkm_id || activeUser.id_umkm || null,
+    nama_umkm:
+      umkm.nama_umkm ||
+      activeUser.nama_umkm ||
+      activeUser.umkm_name ||
+      "UMKM belum tersedia",
+    sektor:
+      umkm.sektor ||
+      umkm.kategori ||
+      activeUser.sektor ||
+      activeUser.kategori ||
+      "Sektor belum tersedia",
+    kategori:
+      umkm.kategori ||
+      umkm.sektor ||
+      activeUser.kategori ||
+      activeUser.sektor ||
+      "Sektor belum tersedia",
+  };
+}
 
 const darkModeToggle = document.getElementById("darkModeToggle");
 const savedTheme = localStorage.getItem("theme");
@@ -48,24 +110,43 @@ if (darkModeToggle) {
 }
 
 function logoutUser() {
+  const confirmLogout = confirm("Yakin ingin keluar dari akun ini?");
+  if (!confirmLogout) return;
+
   localStorage.setItem("isLoggedIn", "false");
   localStorage.removeItem("activeUser");
-  window.location.href = "../landing_page/landing.html";
-}
+  localStorage.removeItem("selectedUmkm");
+  localStorage.removeItem("previewAssessments");
 
-function resetDemoData() {
-  const confirmReset = confirm(
-    "Yakin ingin menghapus semua data demo? Akun, login, dan hasil kuesioner akan hilang."
-  );
-
-  if (!confirmReset) return;
-
-  localStorage.clear();
-  alert("Semua data demo berhasil dihapus.");
-  window.location.href = "../landing page/landing.html";
+  window.location.href = "/landing_page/landing.html";
 }
 
 function goToDashboard() {
-  window.location.href = "../beranda/index.html";
+  window.location.href = "/beranda/index.html";
 }
 
+function normalizeRole(role) {
+  const value = normalizeText(role);
+  if (value === "employee" || value === "karyawan") return "employee";
+  return "owner";
+}
+
+function normalizeText(text) {
+  return String(text || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function setText(id, value) {
+  const element = document.getElementById(id);
+  if (element) element.textContent = value;
+}
+
+function safeJsonParse(value) {
+  try {
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+}

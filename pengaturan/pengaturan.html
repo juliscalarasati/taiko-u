@@ -9,8 +9,6 @@
   <link rel="stylesheet" href="pengaturan.css" />
 </head>
 
-
-
 <body>
   <div class="page">
     <aside class="sidebar">
@@ -33,16 +31,16 @@
     <main class="main">
       <header class="topbar">
         <div>
-          <span class="eyebrow">Pengaturan Sistem</span>
+          <span class="eyebrow">Pengaturan Akun</span>
           <h1>Kelola Akun & Data UMKM</h1>
-          <p>Atur informasi akun, data UMKM, dan sesi login pengguna.</p>
+          <p>Lihat informasi akun, data UMKM, dan status sesi pengguna yang sedang aktif.</p>
         </div>
       </header>
 
       <section id="guestState" class="empty-state" style="display:none;">
         <h2>Belum Login</h2>
         <p>Silakan login terlebih dahulu untuk mengakses pengaturan akun.</p>
-        <a href="../login/login.html">Login Sekarang</a>
+        <a href="/login/login.html">Login Sekarang</a>
       </section>
 
       <section id="settingContent">
@@ -95,12 +93,12 @@
 
             <div class="status-grid">
               <div class="status-card">
-                <span>Total User Terdaftar</span>
-                <h3 id="totalUsers">0</h3>
+                <span>Akun Aktif</span>
+                <h3 id="totalUsers">1</h3>
               </div>
 
               <div class="status-card">
-                <span>Total Assessment</span>
+                <span>Total Assessment UMKM Ini</span>
                 <h3 id="totalAssessments">0</h3>
               </div>
 
@@ -110,7 +108,6 @@
               </div>
             </div>
           </div>
-          
 
           <div class="panel full-panel">
             <h2>Aksi Akun</h2>
@@ -118,12 +115,11 @@
             <div class="action-list">
               <button class="btn-secondary" onclick="goToDashboard()">Kembali ke Dashboard</button>
               <button class="btn-warning" onclick="logoutUser()">Logout</button>
-              <button class="btn-danger" onclick="resetDemoData()">Reset Semua Data Demo</button>
             </div>
 
             <p class="note">
-              Reset data demo akan menghapus akun register, status login, jawaban kuesioner,
-              dan hasil assessment yang tersimpan di localStorage browser.
+              Keluar akun hanya akan mengakhiri sesi login di perangkat ini.
+              Data UMKM dan hasil assessment tetap tersimpan di sistem.
             </p>
           </div>
 
@@ -132,6 +128,7 @@
     </main>
   </div>
 
+  <script src="/js/api.js"></script>
   <script src="pengaturan.js"></script>
 </body>
 </html>
