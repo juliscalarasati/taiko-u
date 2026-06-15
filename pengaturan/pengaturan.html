@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="pengaturan.css" />
 </head>
 
+
+
 <body>
   <div class="page">
     <aside class="sidebar">
@@ -31,16 +33,16 @@
     <main class="main">
       <header class="topbar">
         <div>
-          <span class="eyebrow">Pengaturan Akun</span>
+          <span class="eyebrow">Pengaturan Sistem</span>
           <h1>Kelola Akun & Data UMKM</h1>
-          <p>Lihat informasi akun, data UMKM, dan status sesi pengguna yang sedang aktif.</p>
+          <p>Atur informasi akun, data UMKM, dan sesi login pengguna.</p>
         </div>
       </header>
 
       <section id="guestState" class="empty-state" style="display:none;">
         <h2>Belum Login</h2>
         <p>Silakan login terlebih dahulu untuk mengakses pengaturan akun.</p>
-        <a href="/login/login.html">Login Sekarang</a>
+        <a href="../login/login.html">Login Sekarang</a>
       </section>
 
       <section id="settingContent">
@@ -93,12 +95,12 @@
 
             <div class="status-grid">
               <div class="status-card">
-                <span>Akun Aktif</span>
-                <h3 id="totalUsers">1</h3>
+                <span>Total User Terdaftar</span>
+                <h3 id="totalUsers">0</h3>
               </div>
 
               <div class="status-card">
-                <span>Total Assessment UMKM Ini</span>
+                <span>Total Assessment</span>
                 <h3 id="totalAssessments">0</h3>
               </div>
 
@@ -108,19 +110,24 @@
               </div>
             </div>
           </div>
+          
 
           <div class="panel full-panel">
             <h2>Aksi Akun</h2>
 
             <div class="action-list">
-              <button class="btn-secondary" onclick="goToDashboard()">Kembali ke Dashboard</button>
-              <button class="btn-warning" onclick="logoutUser()">Logout</button>
-            </div>
+  <button class="btn-secondary" onclick="goToDashboard()">Kembali ke Dashboard</button>
+  <button class="btn-warning" onclick="logoutUser()">Logout</button>
+  <button id="deleteUmkmBtn" class="btn-danger" onclick="deleteUmkmAccount()">
+    Hapus Akun & Data UMKM
+  </button>
+</div>
 
-            <p class="note">
-              Keluar akun hanya akan mengakhiri sesi login di perangkat ini.
-              Data UMKM dan hasil assessment tetap tersimpan di sistem.
-            </p>
+<p class="note" id="deleteNote">
+  Fitur hapus akun hanya dapat digunakan oleh Owner. Jika digunakan, akun Owner,
+  akun Karyawan yang terhubung, data UMKM, dan seluruh hasil assessment UMKM ini
+  akan dihapus dari database. Tindakan ini tidak dapat dibatalkan.
+</p>
           </div>
 
         </div>
@@ -129,6 +136,6 @@
   </div>
 
   <script src="/js/api.js"></script>
-  <script src="pengaturan.js"></script>
+<script src="pengaturan.js"></script>
 </body>
 </html>

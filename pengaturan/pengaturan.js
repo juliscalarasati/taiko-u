@@ -89,6 +89,67 @@ function getUserUmkm(activeUser) {
   };
 }
 
+async function deleteUmkmAccount() {
+  const activeUser = safeJsonParse(localStorage.getItem("activeUser"));
+
+  if (!activeUser) {
+    alert("Sesi login tidak ditemukan. Silakan login ulang.");
+    window.location.href = "/login/login.html";
+    return;
+  }
+
+  const userRole = normalizeRole(activeUser.role);
+
+  if (userRole !== "owner") {
+    alert("Fitur hapus akun dan data UMKM hanya bisa dilakukan oleh Owner.");
+    return;
+  }
+
+  const userUmkm = getUserUmkm(activeUser);
+  const umkmId = userUmkm.umkm_id || userUmkm.id;
+  const userId = activeUser.user_id || activeUser.id;
+
+  if (!userId || !umkmId) {
+    alert("Data akun atau UMKM tidak lengkap. Silakan login ulang.");
+    return;
+  }
+
+  const confirmDelete = confirm(
+    `Yakin ingin menghapus akun dan data UMKM "${userUmkm.nama_umkm}"?\n\nData yang dihapus:\n- Akun owner\n- Akun karyawan yang terhubung\n- Data UMKM\n- Hasil assessment UMKM\n\nAksi ini tidak bisa dibatalkan.`
+  );
+
+  if (!confirmDelete) return;
+
+  const keyword = prompt(
+    `Untuk konfirmasi, ketik HAPUS agar data UMKM "${userUmkm.nama_umkm}" benar-benar dihapus.`
+  );
+
+  if (keyword !== "HAPUS") {
+    alert("Konfirmasi salah. Penghapusan dibatalkan.");
+    return;
+  }
+
+  try {
+    const result = await apiRequest("/api/delete-my-umkm", "POST", {
+      user_id: userId,
+      umkm_id: umkmId,
+    });
+
+    if (!result.success) {
+      alert(result.message || "Gagal menghapus akun dan data UMKM.");
+      return;
+    }
+
+    localStorage.clear();
+
+    alert("Akun dan data UMKM berhasil dihapus.");
+    window.location.href = "/landing_page/landing.html";
+  } catch (error) {
+    console.error("Gagal menghapus akun dan data UMKM:", error);
+    alert("Terjadi kesalahan saat menghapus data. Coba lagi nanti.");
+  }
+}
+
 const darkModeToggle = document.getElementById("darkModeToggle");
 const savedTheme = localStorage.getItem("theme");
 

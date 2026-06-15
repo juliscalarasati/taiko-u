@@ -731,6 +731,87 @@ app.get("/api/boxplot", async (req, res) => {
   }
 });
 
+app.post("/api/delete-my-umkm", async (req, res) => {
+  const { user_id, umkm_id } = req.body;
+
+  if (!user_id || !umkm_id) {
+    return res.status(400).json({
+      success: false,
+      message: "User ID dan UMKM ID wajib dikirim.",
+    });
+  }
+
+  let connection;
+
+  try {
+    connection = await db.getConnection();
+
+    const [users] = await connection.query(
+      "SELECT id, role, umkm_id FROM users WHERE id = ? LIMIT 1",
+      [user_id]
+    );
+
+    if (!users.length) {
+      connection.release();
+
+      return res.status(404).json({
+        success: false,
+        message: "Akun tidak ditemukan.",
+      });
+    }
+
+    const user = users[0];
+    const role = String(user.role || "").toLowerCase();
+
+    if (role !== "owner") {
+      connection.release();
+
+      return res.status(403).json({
+        success: false,
+        message: "Hanya Owner yang dapat menghapus akun dan data UMKM.",
+      });
+    }
+
+    if (Number(user.umkm_id) !== Number(umkm_id)) {
+      connection.release();
+
+      return res.status(403).json({
+        success: false,
+        message: "Akun ini tidak terhubung dengan UMKM yang ingin dihapus.",
+      });
+    }
+
+    await connection.beginTransaction();
+
+    await connection.query("DELETE FROM assessments WHERE umkm_id = ?", [umkm_id]);
+    await connection.query("DELETE FROM users WHERE umkm_id = ?", [umkm_id]);
+    await connection.query("DELETE FROM umkm WHERE id = ?", [umkm_id]);
+
+    await connection.commit();
+    connection.release();
+
+    return res.json({
+      success: true,
+      message: "Akun, data UMKM, dan hasil assessment berhasil dihapus.",
+    });
+  } catch (error) {
+    if (connection) {
+      try {
+        await connection.rollback();
+        connection.release();
+      } catch {}
+    }
+
+    console.error("Delete UMKM error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Terjadi kesalahan saat menghapus data UMKM.",
+      error: error.message,
+    });
+  }
+});
+
 if (process.env.NODE_ENV !== "production") {
   app.listen(PORT, () => {
     console.log(`Server berjalan di http://localhost:${PORT}`);
