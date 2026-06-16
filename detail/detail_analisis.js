@@ -39,15 +39,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const assessmentResult = await apiRequest("/api/assessments");
 
-    const boxplotResult = await apiRequest("/api/boxplot").catch((error) => {
-      console.warn("Boxplot API gagal, memakai data dummy 428 UMKM:", error);
-
-      return {
-        success: false,
-        factors: null,
-      };
-    });
-
     if (!assessmentResult.success) {
       throw new Error(
         assessmentResult.message || "Gagal mengambil data assessment."
@@ -97,13 +88,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const combinedResult = calculateCombinedResult(validAssessments);
-    const benchmarkBoxplotData = convertBoxplotApiData(boxplotResult.factors);
+
+    const benchmarkData = buildBenchmarkDataFromAssessments(allAssessments);
+    const benchmarkBoxplotData = benchmarkData.factors;
+    const benchmarkCount = benchmarkData.count;
+
+    replaceBenchmarkText(benchmarkCount);
 
     renderSummary(combinedResult, validAssessments);
     renderFactorChart(combinedResult.factor_scores);
     renderRadarChart(combinedResult.factor_scores);
-    renderBenchmarkBoxplot(combinedResult.factor_scores, benchmarkBoxplotData);
-    renderBenchmarkInsight(combinedResult.factor_scores);
+
+    renderBenchmarkBoxplot(
+      combinedResult.factor_scores,
+      benchmarkBoxplotData,
+      benchmarkCount
+    );
+
+    renderBenchmarkInsight(combinedResult.factor_scores, benchmarkCount);
     renderInsights(combinedResult, validAssessments);
     renderAssessmentTable(validAssessments);
   } catch (error) {
@@ -181,7 +183,6 @@ function normalizeUmkmObject(umkm) {
 
 /* =========================================================
    2. CARI ASSESSMENT SESUAI UMKM
-   Cari pakai ID dulu. Kalau tidak ketemu, baru pakai nama.
 ========================================================= */
 
 function getRelatedAssessments(targetUmkm, assessments) {
@@ -268,55 +269,83 @@ function calculateFactorScoresFromAnswers(answers, role) {
 }
 
 /* =========================================================
-   4. DATA BENCHMARK BOXPLOT 428 UMKM
+   4. DATA PEMBANDING DINAMIS DARI ASSESSMENTS
 ========================================================= */
 
-function convertBoxplotApiData(factors) {
-  const result = {};
-  const keys = ["OV", "LDI", "INS", "OPS", "WEQ", "ECT"];
-
-  keys.forEach((factor) => {
-    const values = Array.isArray(factors?.[factor])
-      ? factors[factor]
-          .map(Number)
-          .filter((value) => !isNaN(value) && value > 0)
-      : [];
-
-    result[factor] =
-      values.length >= 10 ? values : generateDummyBenchmarkScores(factor);
-  });
-
-  return result;
-}
-
-function generateDummyBenchmarkScores(factor) {
-  const baseByFactor = {
-    OV: 3.25,
-    LDI: 3.05,
-    INS: 2.95,
-    OPS: 3.15,
-    WEQ: 3.35,
-    ECT: 3.1,
+function buildBenchmarkDataFromAssessments(assessments) {
+  const factors = {
+    OV: [],
+    LDI: [],
+    INS: [],
+    OPS: [],
+    WEQ: [],
+    ECT: [],
   };
 
-  const base = baseByFactor[factor] || 3.1;
-  const scores = [];
+  const grouped = new Map();
 
-  for (let i = 0; i < 428; i++) {
-    const wave = Math.sin(i * 0.37) * 0.55;
-    const spread = ((i % 17) - 8) * 0.045;
-    const variation = wave + spread;
+  assessments.forEach((item) => {
+    const umkmId = item.umkm_id;
+    if (!umkmId) return;
 
-    let score = base + variation;
+    const answers = parseAnswers(item.answers);
+    const role = normalizeRole(item.user_role || item.role);
+    const factorScores = calculateFactorScoresFromAnswers(answers, role);
 
-    if (i % 41 === 0) score -= 0.75;
-    if (i % 53 === 0) score += 0.65;
+    if (!grouped.has(String(umkmId))) {
+      grouped.set(String(umkmId), {
+        OV: [],
+        LDI: [],
+        INS: [],
+        OPS: [],
+        WEQ: [],
+        ECT: [],
+      });
+    }
 
-    score = Math.max(1, Math.min(5, score));
-    scores.push(Number(score.toFixed(2)));
+    const current = grouped.get(String(umkmId));
+
+    Object.keys(factors).forEach((factor) => {
+      const score = Number(factorScores[factor] || 0);
+
+      if (!isNaN(score) && score > 0) {
+        current[factor].push(score);
+      }
+    });
+  });
+
+  grouped.forEach((scores) => {
+    Object.keys(factors).forEach((factor) => {
+      const avg = average(scores[factor]);
+
+      if (avg > 0) {
+        factors[factor].push(Number(avg.toFixed(2)));
+      }
+    });
+  });
+
+  return {
+    count: grouped.size,
+    factors,
+  };
+}
+
+function replaceBenchmarkText(benchmarkCount) {
+  if (!benchmarkCount) return;
+
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+
+  while (walker.nextNode()) {
+    nodes.push(walker.currentNode);
   }
 
-  return scores;
+  nodes.forEach((node) => {
+    node.nodeValue = node.nodeValue
+      .replaceAll("428 UMKM pembanding", `${benchmarkCount} UMKM yang sudah dinilai`)
+      .replaceAll("428 UMKM Pembanding", `${benchmarkCount} UMKM yang Sudah Dinilai`)
+      .replaceAll("428 UMKM", `${benchmarkCount} UMKM yang sudah dinilai`);
+  });
 }
 
 /* =========================================================
@@ -483,10 +512,14 @@ function renderRadarChart(factorScores) {
 }
 
 /* =========================================================
-   9. BOXPLOT BENCHMARK
+   9. BOXPLOT PEMBANDING DINAMIS
 ========================================================= */
 
-function renderBenchmarkBoxplot(userFactorScores, benchmarkBoxplotData) {
+function renderBenchmarkBoxplot(
+  userFactorScores,
+  benchmarkBoxplotData,
+  benchmarkCount
+) {
   const ctx = document.getElementById("factorBoxplotChart");
   if (!ctx) return;
 
@@ -502,7 +535,7 @@ function renderBenchmarkBoxplot(userFactorScores, benchmarkBoxplotData) {
       labels,
       datasets: [
         {
-          label: "Distribusi 428 UMKM Pembanding",
+          label: `Distribusi ${benchmarkCount} UMKM yang Sudah Dinilai`,
           data: labels.map((key) => benchmarkBoxplotData[key] || []),
           backgroundColor: "rgba(143, 211, 193, 0.45)",
           borderColor: "#1f8a70",
@@ -556,7 +589,7 @@ function renderBenchmarkBoxplot(userFactorScores, benchmarkBoxplotData) {
    10. INSIGHT BOXPLOT
 ========================================================= */
 
-function renderBenchmarkInsight(userFactorScores) {
+function renderBenchmarkInsight(userFactorScores, benchmarkCount) {
   const insightEl = document.getElementById("benchmarkInsight");
   if (!insightEl) return;
 
@@ -567,7 +600,7 @@ function renderBenchmarkInsight(userFactorScores) {
   if (!entries.length) {
     insightEl.innerHTML = `
       <div class="analysis-action">
-        Data faktor belum cukup untuk dibandingkan dengan benchmark.
+        Data faktor belum cukup untuk dibandingkan dengan data UMKM lain.
       </div>
     `;
     return;
@@ -579,10 +612,11 @@ function renderBenchmarkInsight(userFactorScores) {
   insightEl.innerHTML = `
     <div class="insight-intro">
       <span class="insight-label">Interpretasi Boxplot</span>
-      <h3>Posisi UMKM dibandingkan 428 UMKM pembanding</h3>
+      <h3>Posisi UMKM dibandingkan ${benchmarkCount} UMKM yang sudah dinilai</h3>
       <p>
-        Boxplot menampilkan sebaran skor 428 UMKM pembanding, sedangkan titik
-        “Skor UMKM Ini” menunjukkan posisi hasil kuesioner UMKM yang sedang dianalisis.
+        Boxplot menampilkan sebaran skor ${benchmarkCount} UMKM yang sudah memiliki
+        hasil assessment, sedangkan titik “Skor UMKM Ini” menunjukkan posisi hasil
+        kuesioner UMKM yang sedang dianalisis.
       </p>
     </div>
 
@@ -602,7 +636,7 @@ function renderBenchmarkInsight(userFactorScores) {
       </div>
 
       <div class="insight-mini-card warning">
-        <small>Prioritas Perbaikan</small>
+        <small>Area Pengembangan</small>
         <div>
           <span class="factor-code">${escapeHtml(lowest[0])}</span>
           <span class="factor-name">
@@ -611,7 +645,7 @@ function renderBenchmarkInsight(userFactorScores) {
         </div>
         <p>
           Skor <b>${Number(lowest[1]).toFixed(2)}</b>.
-          Faktor ini perlu mendapat perhatian lebih dulu.
+          Faktor ini menjadi aspek terendah dibanding faktor lain, sehingga masih bisa ditingkatkan.
         </p>
       </div>
     </div>
