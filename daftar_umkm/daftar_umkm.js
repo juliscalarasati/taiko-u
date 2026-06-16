@@ -8,63 +8,49 @@ document.addEventListener("DOMContentLoaded", async () => {
   let savedAssessments = [];
 
   try {
-    const umkmRes = await fetch("/api/umkm");
-    const umkmJson = await umkmRes.json();
+    const umkmResult = await apiRequest("/api/umkm");
 
-    if (umkmJson.success && Array.isArray(umkmJson.data)) {
-      savedUmkms = umkmJson.data.map((item) => ({
-        umkm_id: item.umkm_id || item.id,
-        id: item.umkm_id || item.id,
-        nama_umkm: item.nama_umkm || "UMKM tanpa nama",
-        sektor: formatText(item.sektor || item.kategori || "Sektor belum tersedia"),
-        kategori: formatText(item.kategori || item.sektor || "Sektor belum tersedia"),
-        pemilik: item.pemilik || "-",
-        alamat: item.alamat || "-",
-        created_at: item.created_at || null,
-      }));
+    if (umkmResult.success && Array.isArray(umkmResult.data)) {
+      savedUmkms = normalizeUmkmList(umkmResult.data);
     }
   } catch (error) {
     console.error("Gagal mengambil data UMKM:", error);
   }
 
   try {
-    const assessmentRes = await fetch("/api/assessments");
+    const assessmentResult = await apiRequest("/api/assessments");
 
-    if (assessmentRes.ok) {
-      const assessmentJson = await assessmentRes.json();
+    if (assessmentResult.success && Array.isArray(assessmentResult.data)) {
+      savedAssessments = assessmentResult.data.map((item) => {
+        const answers = parseAnswers(item.answers);
+        const role = normalizeRole(item.user_role || item.role || "owner");
+        const factorScores = calculateFactorScoresFromAnswers(answers, role);
 
-      if (assessmentJson.success && Array.isArray(assessmentJson.data)) {
-        savedAssessments = assessmentJson.data.map((item) => {
-          const answers = parseAnswers(item.answers);
-          const role = normalizeRole(item.user_role || item.role || "owner");
-          const factorScores = calculateFactorScoresFromAnswers(answers, role);
-          const validScores = Object.values(factorScores).filter(
-            (score) => Number(score) > 0
-          );
-          const totalAverageScore = average(validScores);
+        const validScores = Object.values(factorScores).filter(
+          (score) => Number(score) > 0
+        );
 
-          return {
-            assessment_id: item.id,
-            user_id: item.user_id,
-            user_name: item.user_name || item.name || "User",
-            user_role: role,
-            umkm_id: item.umkm_id,
-            nama_umkm: item.nama_umkm,
-            total_average_score: totalAverageScore,
-            category: calculateCategory(totalAverageScore),
-            assessment_date: item.created_at,
-            factor_scores: factorScores,
-          };
-        });
-      }
+        const totalAverageScore = average(validScores);
+
+        return {
+          assessment_id: item.id,
+          user_id: item.user_id,
+          user_name: item.user_name || item.name || "User",
+          user_role: role,
+          umkm_id: item.umkm_id,
+          nama_umkm: item.nama_umkm,
+          total_average_score: totalAverageScore,
+          category: calculateCategory(totalAverageScore),
+          assessment_date: item.created_at,
+          factor_scores: factorScores,
+        };
+      });
     }
   } catch (error) {
     console.warn("Data assessment belum tersedia:", error);
   }
 
-  const uniqueUmkms = dedupeUmkms(savedUmkms);
-
-  const enrichedUmkms = uniqueUmkms.map((umkm) => {
+  const enrichedUmkms = savedUmkms.map((umkm) => {
     const result = calculateUmkmHealth(umkm, savedAssessments);
 
     return {
@@ -97,7 +83,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         normalizeText(umkm.sektor).includes(keyword) ||
         normalizeText(umkm.pemilik).includes(keyword);
 
-      const matchSector = selectedSector === "all" || umkm.sektor === selectedSector;
+      const matchSector =
+        selectedSector === "all" || umkm.sektor === selectedSector;
 
       const matchCategory =
         selectedCategory === "all" || umkm.category === selectedCategory;
@@ -129,6 +116,28 @@ document.addEventListener("DOMContentLoaded", async () => {
   sortFilter?.addEventListener("change", applyFilters);
 });
 
+function normalizeUmkmList(umkms) {
+  const map = new Map();
+
+  umkms.forEach((item) => {
+    const id = item.umkm_id || item.id;
+    if (!id) return;
+
+    map.set(String(id), {
+      umkm_id: id,
+      id,
+      nama_umkm: item.nama_umkm || "UMKM tanpa nama",
+      sektor: formatText(item.sektor || item.kategori || "Sektor belum tersedia"),
+      kategori: formatText(item.kategori || item.sektor || "Sektor belum tersedia"),
+      pemilik: item.pemilik || "-",
+      alamat: item.alamat || "-",
+      created_at: item.created_at || null,
+    });
+  });
+
+  return Array.from(map.values());
+}
+
 function populateSectorFilter(umkms) {
   const sectorFilter = document.getElementById("sectorFilter");
   if (!sectorFilter) return;
@@ -138,11 +147,9 @@ function populateSectorFilter(umkms) {
   sectorFilter.innerHTML = `
     <option value="all">Semua Sektor</option>
     ${sectors
-      .map(
-        (sector) => `
-      <option value="${escapeHtml(sector)}">${escapeHtml(sector)}</option>
-    `
-      )
+      .map((sector) => {
+        return `<option value="${escapeHtml(sector)}">${escapeHtml(sector)}</option>`;
+      })
       .join("")}
   `;
 }
@@ -186,7 +193,6 @@ function calculateUmkmHealth(umkm, assessments) {
   const employeeFilled = relatedAssessments.some((item) => item.user_role === "employee");
 
   let statusText = "SUDAH DINILAI";
-  let statusClass = "done";
 
   if (ownerFilled && employeeFilled) {
     statusText = "LENGKAP";
@@ -205,21 +211,38 @@ function calculateUmkmHealth(umkm, assessments) {
     category: calculateCategory(score),
     assessed: true,
     statusText,
-    statusClass,
+    statusClass: "done",
     ownerFilled,
     employeeFilled,
     respondentCount: relatedAssessments.length,
   };
 }
 
+function getRelatedAssessments(umkm, assessments) {
+  const umkmId = umkm.umkm_id || umkm.id;
+  const umkmName = normalizeText(umkm.nama_umkm);
+
+  if (umkmId) {
+    return assessments.filter((item) => item.umkm_id == umkmId);
+  }
+
+  return assessments.filter((item) => {
+    return normalizeText(item.nama_umkm) === umkmName;
+  });
+}
+
 function renderSummary(umkms) {
   const assessed = umkms.filter((item) => item.assessed);
-  const scores = assessed.map((item) => item.percentage).filter((score) => score > 0);
+
+  const scores = assessed
+    .map((item) => item.percentage)
+    .filter((score) => score > 0);
+
   const avg = scores.length ? Math.round(average(scores)) : 0;
 
-  const needAttention = assessed.filter(
-    (item) => item.category === "Buruk" || item.category === "Cukup"
-  ).length;
+  const needAttention = assessed.filter((item) => {
+    return item.category === "Buruk" || item.category === "Cukup";
+  }).length;
 
   setText("totalUmkm", umkms.length);
   setText("averageScore", `${avg}%`);
@@ -246,34 +269,34 @@ function renderUmkmCards(umkms) {
       const encodedUmkm = encodeURIComponent(JSON.stringify(umkm));
 
       return `
-      <article class="umkm-card" onclick="openUmkmDetail('${encodedUmkm}')">
-        <div class="card-top">
-          <div class="umkm-icon">${escapeHtml(getInitial(umkm.nama_umkm))}</div>
-          <span class="status ${escapeHtml(umkm.statusClass)}">${escapeHtml(umkm.statusText)}</span>
-        </div>
+        <article class="umkm-card" onclick="openUmkmDetail('${encodedUmkm}')">
+          <div class="card-top">
+            <div class="umkm-icon">${escapeHtml(getInitial(umkm.nama_umkm))}</div>
+            <span class="status ${escapeHtml(umkm.statusClass)}">${escapeHtml(umkm.statusText)}</span>
+          </div>
 
-        <h3>${escapeHtml(umkm.nama_umkm)}</h3>
-        <p>Pemilik: ${escapeHtml(umkm.pemilik || "-")}</p>
-        <span class="sector">${escapeHtml(umkm.sektor || "Sektor belum tersedia")}</span>
+          <h3>${escapeHtml(umkm.nama_umkm)}</h3>
+          <p>Pemilik: ${escapeHtml(umkm.pemilik || "-")}</p>
+          <span class="sector">${escapeHtml(umkm.sektor || "Sektor belum tersedia")}</span>
 
-        <div class="score-row">
-          <strong>Kesehatan Organisasi</strong>
-          <strong>${escapeHtml(scoreText)}</strong>
-        </div>
+          <div class="score-row">
+            <strong>Kesehatan Organisasi</strong>
+            <strong>${escapeHtml(scoreText)}</strong>
+          </div>
 
-        <div class="progress">
-          <div class="progress-fill" style="width:${progressWidth}%"></div>
-        </div>
+          <div class="progress">
+            <div class="progress-fill" style="width:${progressWidth}%"></div>
+          </div>
 
-        <div class="category">
-          Kategori: <b>${escapeHtml(umkm.category)}</b>
-        </div>
+          <div class="category">
+            Kategori: <b>${escapeHtml(umkm.category)}</b>
+          </div>
 
-        <div class="category">
-          Responden: <b>${umkm.respondentCount || 0}</b>
-        </div>
-      </article>
-    `;
+          <div class="category">
+            Responden: <b>${umkm.respondentCount || 0}</b>
+          </div>
+        </article>
+      `;
     })
     .join("");
 }
@@ -283,49 +306,6 @@ function openUmkmDetail(encodedUmkm) {
   localStorage.setItem("selectedUmkm", JSON.stringify(umkm));
   localStorage.removeItem("previewAssessments");
   window.location.href = "../detail/detail_analisis.html";
-}
-
-function getRelatedAssessments(umkm, assessments) {
-  const umkmId = umkm.umkm_id || umkm.id;
-  const umkmName = normalizeText(umkm.nama_umkm);
-
-  return assessments.filter((item) => {
-    return item.umkm_id == umkmId || normalizeText(item.nama_umkm) === umkmName;
-  });
-}
-
-function dedupeUmkms(umkms) {
-  const map = new Map();
-
-  umkms.forEach((item) => {
-    const key = normalizeText(item.nama_umkm);
-    if (!key) return;
-
-    if (!map.has(key)) {
-      map.set(key, { ...item });
-      return;
-    }
-
-    const existing = map.get(key);
-
-    map.set(key, {
-      ...existing,
-      umkm_id: existing.umkm_id || item.umkm_id,
-      id: existing.id || item.id,
-      pemilik: existing.pemilik && existing.pemilik !== "-" ? existing.pemilik : item.pemilik || "-",
-      sektor:
-        existing.sektor && existing.sektor !== "Sektor Belum Tersedia"
-          ? existing.sektor
-          : item.sektor,
-      kategori:
-        existing.kategori && existing.kategori !== "Sektor Belum Tersedia"
-          ? existing.kategori
-          : item.kategori,
-      alamat: existing.alamat && existing.alamat !== "-" ? existing.alamat : item.alamat || "-",
-    });
-  });
-
-  return Array.from(map.values());
 }
 
 function parseAnswers(rawAnswers) {

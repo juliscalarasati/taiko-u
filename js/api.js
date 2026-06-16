@@ -18,9 +18,9 @@ async function apiRequest(endpoint, method = "GET", body = null) {
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+    const text = await response.text();
 
     let data = {};
-    const text = await response.text();
 
     try {
       data = text ? JSON.parse(text) : {};

@@ -21,41 +21,50 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-/* =========================================================
-   LOAD DATA DASHBOARD
-========================================================= */
-
 async function loadDashboardData() {
-  const boxplotResult = await apiRequest("/api/boxplot");
-  const dashboardResult = await apiRequest("/api/dashboard");
-  const assessmentResult = await apiRequest("/api/assessments");
+  const fallbackData = await getLocalDashboardData();
 
-  if (!boxplotResult.success) {
-    throw new Error(boxplotResult.message || "Gagal mengambil data boxplot.");
-  }
+  const boxplotResult = await safeApiRequest("/api/boxplot");
+  const dashboardResult = await safeApiRequest("/api/dashboard");
+  const assessmentResult = await safeApiRequest("/api/assessments");
+  const umkmResult = await safeApiRequest("/api/umkm");
 
-  if (!dashboardResult.success) {
-    throw new Error(dashboardResult.message || "Gagal mengambil data dashboard.");
-  }
+  const factorsObject = boxplotResult?.factors || null;
 
-  const factorsObject = boxplotResult.factors || {};
+  const umkms =
+    umkmResult?.success && Array.isArray(umkmResult.data)
+      ? normalizeUmkmList(umkmResult.data)
+      : [];
+
   const assessments =
-    assessmentResult.success && Array.isArray(assessmentResult.data)
+    assessmentResult?.success && Array.isArray(assessmentResult.data)
       ? assessmentResult.data
       : [];
 
-  const factors = createFactorStats(factorsObject);
-  const boxplot = createBoxplotData(factorsObject);
+  const factors = createFactorStats(factorsObject, fallbackData.factors);
+  const boxplot = createBoxplotData(factorsObject, fallbackData.boxplot);
 
-  const umkmScores = calculateUmkmScoresFromAssessments(assessments);
-  const distribution = createDistributionFromScores(umkmScores);
-  const topBottom = createTopBottomFromScores(umkmScores);
+  const umkmScores = calculateUmkmScoresFromUmkmList(umkms, assessments);
 
-  const healthyCount = umkmScores.filter(
-    (item) => item.category === "Baik" || item.category === "Sangat Baik"
-  ).length;
+  const distribution =
+    umkmScores.length > 0
+      ? createDistributionFromScores(umkmScores)
+      : fallbackData.distribution || [];
 
-  const totalCount = umkmScores.length;
+  const topBottom =
+    umkmScores.length > 0
+      ? createTopBottomFromScores(umkmScores)
+      : fallbackData.topBottom || { top3: [], bottom3: [] };
+
+  const healthyCount = umkmScores.filter((item) => {
+    return item.category === "Baik" || item.category === "Sangat Baik";
+  }).length;
+
+  const totalCount =
+    umkms.length ||
+    fallbackData.healthyProbability?.totalCount ||
+    umkmScores.length ||
+    0;
 
   return {
     factors,
@@ -67,68 +76,121 @@ async function loadDashboardData() {
       healthyCount,
       totalCount,
     },
-    apiDashboard: dashboardResult.data,
+    apiDashboard: dashboardResult?.data || {},
   };
 }
 
-/* =========================================================
-   HITUNG SKOR DARI ASSESSMENTS
-========================================================= */
+async function safeApiRequest(endpoint) {
+  try {
+    return await apiRequest(endpoint);
+  } catch (error) {
+    console.warn(`Gagal mengambil ${endpoint}:`, error);
+    return null;
+  }
+}
 
-function calculateUmkmScoresFromAssessments(assessments) {
-  const grouped = {};
-
-  assessments.forEach((item) => {
-    const umkmId = item.umkm_id;
-    if (!umkmId) return;
-
-    const answers = parseAnswers(item.answers);
-    if (!answers.length) return;
-
-    const role = normalizeRole(item.user_role || item.role);
-    const score = calculateScoreByRole(answers, role);
-
-    if (!score || score <= 0) return;
-
-    if (!grouped[umkmId]) {
-      grouped[umkmId] = {
-        id: umkmId,
-        name: item.nama_umkm || `UMKM ${umkmId}`,
-        scores: [],
-      };
-    }
-
-    grouped[umkmId].scores.push(score);
-  });
-
-  return Object.values(grouped).map((item) => {
-    const finalScore = average(item.scores);
+async function getLocalDashboardData() {
+  try {
+    const response = await fetch("./data.json");
+    if (!response.ok) throw new Error("data.json tidak ditemukan");
+    return await response.json();
+  } catch (error) {
+    console.warn("Fallback data.json gagal:", error);
 
     return {
-      id: item.id,
-      name: item.name,
-      score: finalScore,
-      category: calculateCategory(finalScore),
+      factors: [],
+      distribution: [],
+      topBottom: { top3: [], bottom3: [] },
+      boxplot: [],
+      healthyProbability: {
+        healthyCount: 0,
+        totalCount: 0,
+        percentage: 0,
+      },
     };
+  }
+}
+
+function normalizeUmkmList(umkms) {
+  const map = new Map();
+
+  umkms.forEach((item) => {
+    const id = item.umkm_id || item.id;
+    if (!id) return;
+
+    map.set(String(id), {
+      id,
+      umkm_id: id,
+      nama_umkm: item.nama_umkm || "UMKM tanpa nama",
+      sektor: item.sektor || item.kategori || "Sektor belum tersedia",
+      kategori: item.kategori || item.sektor || "Sektor belum tersedia",
+      pemilik: item.pemilik || "-",
+      alamat: item.alamat || "-",
+      created_at: item.created_at || null,
+    });
+  });
+
+  return Array.from(map.values());
+}
+
+function calculateUmkmScoresFromUmkmList(umkms, assessments) {
+  return umkms
+    .map((umkm) => {
+      const relatedAssessments = getRelatedAssessments(umkm, assessments);
+
+      const scores = relatedAssessments
+        .map((item) => {
+          const answers = parseAnswers(item.answers);
+          const role = normalizeRole(item.user_role || item.role);
+          return calculateScoreByRole(answers, role);
+        })
+        .filter((score) => Number(score) > 0);
+
+      if (!scores.length) return null;
+
+      const score = average(scores);
+
+      return {
+        id: umkm.umkm_id || umkm.id,
+        name: umkm.nama_umkm,
+        score,
+        category: calculateCategory(score),
+      };
+    })
+    .filter(Boolean);
+}
+
+function getRelatedAssessments(umkm, assessments) {
+  const umkmId = umkm.umkm_id || umkm.id;
+  const umkmName = normalizeText(umkm.nama_umkm);
+
+  if (umkmId) {
+    return assessments.filter((item) => item.umkm_id == umkmId);
+  }
+
+  return assessments.filter((item) => {
+    return normalizeText(item.nama_umkm) === umkmName;
   });
 }
 
 function calculateScoreByRole(answers, role) {
+  if (!Array.isArray(answers) || !answers.length) return 0;
+
   if (role === "owner") {
     const factorScores = [
-      average(answers.slice(0, 6)),   // INS
-      average(answers.slice(6, 7)),   // OV
-      average(answers.slice(7, 12)),  // OPS
-      average(answers.slice(12, 16)), // ECT
+      average(answers.slice(0, 6)),
+      average(answers.slice(6, 7)),
+      average(answers.slice(7, 12)),
+      average(answers.slice(12, 16)),
     ].filter((score) => score > 0);
 
     return average(factorScores);
   }
 
   const factorScores = [
-    average(answers.slice(0, 6)),   // LDI
-    average(answers.slice(6, 11)),  // WEQ
-    average(answers.slice(11, 19)), // OV
+    average(answers.slice(0, 6)),
+    average(answers.slice(6, 11)),
+    average(answers.slice(11, 19)),
   ].filter((score) => score > 0);
 
   return average(factorScores);
@@ -153,34 +215,38 @@ function parseAnswers(rawAnswers) {
   return [];
 }
 
-/* =========================================================
-   DATA UNTUK CHART
-========================================================= */
+function createFactorStats(factorsObject, fallbackFactors = []) {
+  if (factorsObject && Object.keys(factorsObject).length) {
+    return Object.keys(factorsObject).map((factorName) => {
+      const values = factorsObject[factorName]
+        .map(Number)
+        .filter((value) => !isNaN(value) && value > 0);
 
-function createFactorStats(factorsObject) {
-  return Object.keys(factorsObject).map((factorName) => {
-    const values = factorsObject[factorName]
-      .map(Number)
-      .filter((value) => !isNaN(value) && value > 0);
+      return {
+        name: factorName,
+        values,
+        mean: average(values),
+        stdDev: calculateStdDev(values),
+        min: values.length ? Math.min(...values) : 0,
+        max: values.length ? Math.max(...values) : 0,
+      };
+    });
+  }
 
-    return {
-      name: factorName,
-      values,
-      mean: average(values),
-      stdDev: calculateStdDev(values),
-      min: values.length ? Math.min(...values) : 0,
-      max: values.length ? Math.max(...values) : 0,
-    };
-  });
+  return Array.isArray(fallbackFactors) ? fallbackFactors : [];
 }
 
-function createBoxplotData(factorsObject) {
-  return Object.keys(factorsObject).map((factorName) => ({
-    label: factorName,
-    items: factorsObject[factorName]
-      .map(Number)
-      .filter((value) => !isNaN(value) && value > 0),
-  }));
+function createBoxplotData(factorsObject, fallbackBoxplot = []) {
+  if (factorsObject && Object.keys(factorsObject).length) {
+    return Object.keys(factorsObject).map((factorName) => ({
+      label: factorName,
+      items: factorsObject[factorName]
+        .map(Number)
+        .filter((value) => !isNaN(value) && value > 0),
+    }));
+  }
+
+  return Array.isArray(fallbackBoxplot) ? fallbackBoxplot : [];
 }
 
 function createDistributionFromScores(scores) {
@@ -212,10 +278,6 @@ function createTopBottomFromScores(scores) {
     bottom3: sortedScores.slice(-3).reverse(),
   };
 }
-
-/* =========================================================
-   USER CARD & NOTIFIKASI
-========================================================= */
 
 function createUserInfoCard() {
   const container = document.getElementById("userInfoCard");
@@ -284,14 +346,9 @@ async function createDashboardNotification() {
   }
 
   const activeUmkmId = activeUser.umkm_id || activeUser.umkm?.umkm_id;
-  const activeUmkmName = normalizeText(activeUser.umkm?.nama_umkm);
-
-  const sameUmkmAssessments = assessments.filter((item) => {
-    return (
-      item.umkm_id == activeUmkmId ||
-      normalizeText(item.nama_umkm) === activeUmkmName
-    );
-  });
+  const sameUmkmAssessments = activeUmkmId
+    ? assessments.filter((item) => item.umkm_id == activeUmkmId)
+    : [];
 
   const currentUserHasSubmitted = sameUmkmAssessments.some((item) => {
     return item.user_id == activeUser.user_id || item.user_id == activeUser.id;
@@ -344,10 +401,6 @@ function logoutUser() {
   window.location.href = "../landing_page/landing.html";
 }
 
-/* =========================================================
-   CARD DASHBOARD
-========================================================= */
-
 function updateSummaryCards(data) {
   const statCards = document.querySelectorAll(".stat-card");
   const factors = Array.isArray(data.factors) ? data.factors : [];
@@ -387,11 +440,11 @@ function createHealthyCard(data) {
       <div class="value">${formatPercent(healthyData.percentage)}</div>
 
       <div class="desc">
-        ${healthyData.healthyCount} dari ${healthyData.totalCount} UMKM yang sudah dinilai termasuk kategori sehat.
+        ${healthyData.healthyCount} dari ${healthyData.totalCount} UMKM terdaftar termasuk kategori sehat.
       </div>
 
       <p class="insight" style="margin-bottom:0;">
-        Persentase ini dihitung berdasarkan hasil assessment UMKM yang tersimpan di database.
+        Persentase ini dihitung berdasarkan data UMKM dan hasil assessment yang tersimpan di database.
       </p>
     </div>
   `;
@@ -422,10 +475,6 @@ function createRecommendationCard() {
   `;
 }
 
-/* =========================================================
-   CHARTS
-========================================================= */
-
 function createFactorChart(factors) {
   const ctx = document.getElementById("factorChart");
   if (!ctx || !Array.isArray(factors) || !factors.length) return;
@@ -448,29 +497,11 @@ function createFactorChart(factors) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-
       plugins: {
         legend: { display: false },
-
-        tooltip: {
-          callbacks: {
-            label: function (context) {
-              const factor = factors[context.dataIndex];
-
-              return [
-                `Mean: ${formatNumber(factor.mean)}`,
-                `Std. Deviasi: ${formatNumber(factor.stdDev)}`,
-                `Minimum: ${formatNumber(factor.min)}`,
-                `Maksimum: ${formatNumber(factor.max)}`,
-              ];
-            },
-          },
-        },
       },
-
       scales: {
         x: { grid: { display: false } },
-
         y: {
           beginAtZero: true,
           suggestedMax: 5,
@@ -488,10 +519,8 @@ function createDistributionChart(distribution) {
 
   new Chart(ctx, {
     type: "doughnut",
-
     data: {
       labels: distribution.map((d) => d.category),
-
       datasets: [
         {
           data: values,
@@ -500,34 +529,19 @@ function createDistributionChart(distribution) {
         },
       ],
     },
-
     options: {
       responsive: true,
       maintainAspectRatio: false,
       cutout: "68%",
-
       plugins: {
         legend: {
           position: "bottom",
-
           labels: {
             usePointStyle: true,
             pointStyle: "circle",
             padding: 16,
             color: "#5c6d74",
             font: { size: 12 },
-          },
-        },
-
-        tooltip: {
-          callbacks: {
-            label: function (context) {
-              const total = values.reduce((a, b) => a + b, 0);
-              const val = Number(context.raw);
-              const pct = total ? ((val / total) * 100).toFixed(2) : 0;
-
-              return `${context.label}: ${val} UMKM (${pct}%)`;
-            },
           },
         },
       },
@@ -556,10 +570,8 @@ function createTopBottomChart(topBottom) {
 
   new Chart(ctx, {
     type: "bar",
-
     data: {
       labels,
-
       datasets: [
         {
           data: values,
@@ -575,22 +587,18 @@ function createTopBottomChart(topBottom) {
         },
       ],
     },
-
     options: {
       indexAxis: "y",
       responsive: true,
       maintainAspectRatio: false,
-
       plugins: {
         legend: { display: false },
       },
-
       scales: {
         x: {
           beginAtZero: true,
           suggestedMax: 5,
         },
-
         y: {
           grid: { display: false },
         },
@@ -603,17 +611,10 @@ function createBoxplotChart(boxplotData) {
   const ctx = document.getElementById("boxplotChart");
   if (!ctx || !Array.isArray(boxplotData) || !boxplotData.length) return;
 
-  if (typeof Chart === "undefined") {
-    console.error("Chart.js belum termuat.");
-    return;
-  }
-
   new Chart(ctx, {
     type: "boxplot",
-
     data: {
       labels: boxplotData.map((x) => x.label),
-
       datasets: [
         {
           label: "Sebaran Skor",
@@ -628,21 +629,17 @@ function createBoxplotChart(boxplotData) {
         },
       ],
     },
-
     options: {
       responsive: true,
       maintainAspectRatio: false,
-
       plugins: {
         legend: { display: false },
       },
-
       scales: {
         x: {
           grid: { display: false },
           ticks: { color: "#5c6d74" },
         },
-
         y: {
           beginAtZero: true,
           suggestedMax: 5,
@@ -654,16 +651,28 @@ function createBoxplotChart(boxplotData) {
   });
 }
 
-/* =========================================================
-   HELPER
-========================================================= */
+function safeRun(callback, chartName) {
+  try {
+    callback();
+  } catch (error) {
+    console.error(`Gagal membuat chart ${chartName}:`, error);
+  }
+}
+
+function showErrorState(message) {
+  document.body.insertAdjacentHTML(
+    "afterbegin",
+    `<div style="margin:16px; padding:12px 16px; background:#fdeaea; color:#c94b4b; border-radius:10px;">
+      ${escapeHtml(message)}
+    </div>`
+  );
+}
 
 function calculateCategory(score) {
   if (score >= 4.1) return "Sangat Baik";
   if (score >= 3.1) return "Baik";
   if (score >= 2.1) return "Cukup";
   if (score > 0) return "Buruk";
-
   return "Belum Dinilai";
 }
 
@@ -686,7 +695,6 @@ function normalizeText(text) {
 
 function average(arr) {
   if (!arr || !arr.length) return 0;
-
   return arr.reduce((sum, n) => sum + Number(n || 0), 0) / arr.length;
 }
 

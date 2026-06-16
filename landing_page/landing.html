@@ -1,41 +1,41 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>TAIKO & U Landing Page</title>
-  <link rel="stylesheet" href="/theme/global.css"/>
+
+  <link rel="stylesheet" href="/theme/global.css" />
   <link rel="stylesheet" href="landing.css" />
 </head>
-
 
 <body>
   <main class="landing">
 
-    <!-- HERO -->
     <section class="hero">
-    <div class="hero-text">
-  <div class="badge">Platform Analisis Kesehatan Organisasi UMKM</div>
+      <div class="hero-text">
+        <div class="badge">Platform Analisis Kesehatan Organisasi UMKM</div>
 
-  <h1>TAIKO & U</h1>
+        <h1>TAIKO & U</h1>
 
-  <p class="subtitle">
-    <b>Teman Analisis Kesehatan Organisasi & UMKM</b>
-  </p>
+        <p class="subtitle">
+          <b>Teman Analisis Kesehatan Organisasi & UMKM</b>
+        </p>
 
-  <h2>Kenali kondisi organisasi UMKM dengan lebih mudah.</h2>
+        <h2>Kenali kondisi organisasi UMKM dengan lebih mudah.</h2>
 
-  <p>
-    TAIKO & U membantu UMKM memahami kondisi internal organisasi melalui
-    data kuesioner yang divisualisasikan menjadi dashboard sederhana,
-    informatif, dan mudah dibaca.
-  </p>
+        <p>
+          TAIKO & U membantu UMKM memahami kondisi internal organisasi melalui
+          data kuesioner yang divisualisasikan menjadi dashboard sederhana,
+          informatif, dan mudah dibaca.
+        </p>
 
-  <div class="hero-actions">
-    <a href="/register/register.html" class="btn-primary">Mulai Sekarang</a>
-<a href="/login/login.html" class="btn-secondary">Masuk</a>
-  </div>
-</div>
+        <div class="hero-actions">
+          <a href="/register/register.html" class="btn-primary">Mulai Sekarang</a>
+          <a href="/login/login.html" class="btn-secondary">Masuk</a>
+        </div>
+      </div>
 
       <div class="hero-card">
         <div class="simple-preview">
@@ -63,10 +63,9 @@
       </div>
     </section>
 
-    <!-- SUMMARY -->
     <section class="summary">
       <div>
-        <h3>428</h3>
+        <h3 id="landingTotalUmkm">428</h3>
         <p>UMKM dianalisis</p>
       </div>
 
@@ -76,7 +75,7 @@
       </div>
 
       <div>
-        <h3>2.34%</h3>
+        <h3 id="landingHealthyPercent">2.34%</h3>
         <p>UMKM kategori sehat</p>
       </div>
 
@@ -86,11 +85,10 @@
       </div>
     </section>
 
-    <!-- WHY -->
     <section class="section">
       <div class="section-heading">
         <span>Kenapa TAIKO & U?</span>
-        <h2>Membantu mengetahui presentase kesehatan organisasi & UMKM milikmu !</h2>
+        <h2>Membantu mengetahui persentase kesehatan organisasi & UMKM milikmu!</h2>
         <p>
           TAIKO & U dirancang agar pengguna tidak hanya melihat angka,
           tetapi juga memahami kondisi organisasi serta rekomendasi perbaikan
@@ -128,7 +126,6 @@
       </div>
     </section>
 
-    <!-- FACTORS -->
     <section class="factors-section">
       <div class="section-heading">
         <span>Faktor yang Dinilai</span>
@@ -178,7 +175,6 @@
       </div>
     </section>
 
-    <!-- WORKFLOW -->
     <section class="workflow">
       <div class="workflow-text">
         <span>Alur Penggunaan</span>
@@ -194,9 +190,7 @@
         <div class="step">
           <b>01</b>
           <h3>Pengisian Kuesioner</h3>
-          <p>
-            UMKM mengisi kuesioner berdasarkan kondisi organisasi yang mereka miliki.
-          </p>
+          <p>UMKM mengisi kuesioner berdasarkan kondisi organisasi yang mereka miliki.</p>
         </div>
 
         <div class="step">
@@ -228,7 +222,6 @@
       </div>
     </section>
 
-    <!-- CTA -->
     <section class="cta">
       <h2>Siap melihat kondisi organisasi UMKM secara visual?</h2>
       <p>
@@ -238,10 +231,133 @@
 
       <div class="hero-actions center">
         <a href="/register/register.html" class="btn-light">Mulai Sekarang</a>
-<a href="/login/login.html" class="btn-outline-light">Masuk</a>
+        <a href="/login/login.html" class="btn-outline-light">Masuk</a>
       </div>
     </section>
 
   </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      try {
+        const umkmRes = await fetch("/api/umkm");
+        const assessmentRes = await fetch("/api/assessments");
+
+        const umkmJson = await umkmRes.json();
+        const assessmentJson = await assessmentRes.json();
+
+        const umkms =
+          umkmJson.success && Array.isArray(umkmJson.data)
+            ? normalizeUmkmList(umkmJson.data)
+            : [];
+
+        const assessments =
+          assessmentJson.success && Array.isArray(assessmentJson.data)
+            ? assessmentJson.data
+            : [];
+
+        const totalUmkm = umkms.length || 428;
+        const healthyCount = countHealthyUmkms(umkms, assessments);
+        const healthyPercent = totalUmkm ? (healthyCount / totalUmkm) * 100 : 0;
+
+        setText("landingTotalUmkm", totalUmkm);
+        setText("landingHealthyPercent", `${healthyPercent.toFixed(2)}%`);
+      } catch (error) {
+        console.warn("Landing summary memakai data default:", error);
+      }
+    });
+
+    function normalizeUmkmList(umkms) {
+      const map = new Map();
+
+      umkms.forEach((item) => {
+        const id = item.umkm_id || item.id;
+        if (!id) return;
+
+        map.set(String(id), {
+          id,
+          umkm_id: id,
+          nama_umkm: item.nama_umkm || "UMKM tanpa nama",
+        });
+      });
+
+      return Array.from(map.values());
+    }
+
+    function countHealthyUmkms(umkms, assessments) {
+      return umkms.filter((umkm) => {
+        const related = assessments.filter((item) => item.umkm_id == umkm.umkm_id);
+
+        const scores = related
+          .map((item) => {
+            const answers = parseAnswers(item.answers);
+            const role = normalizeRole(item.user_role || item.role);
+
+            return calculateScoreByRole(answers, role);
+          })
+          .filter((score) => Number(score) > 0);
+
+        if (!scores.length) return false;
+
+        const avg = average(scores);
+
+        return avg >= 3.1;
+      }).length;
+    }
+
+    function parseAnswers(rawAnswers) {
+      if (Array.isArray(rawAnswers)) return rawAnswers.map(Number);
+
+      if (typeof rawAnswers === "string") {
+        try {
+          const parsed = JSON.parse(rawAnswers);
+          return Array.isArray(parsed) ? parsed.map(Number) : [];
+        } catch {
+          return [];
+        }
+      }
+
+      return [];
+    }
+
+    function calculateScoreByRole(answers, role) {
+      if (!Array.isArray(answers) || !answers.length) return 0;
+
+      if (normalizeRole(role) === "owner") {
+        return average([
+          average(answers.slice(0, 6)),
+          average(answers.slice(6, 7)),
+          average(answers.slice(7, 12)),
+          average(answers.slice(12, 16)),
+        ].filter((score) => score > 0));
+      }
+
+      return average([
+        average(answers.slice(0, 6)),
+        average(answers.slice(6, 11)),
+        average(answers.slice(11, 19)),
+      ].filter((score) => score > 0));
+    }
+
+    function normalizeRole(role) {
+      const value = String(role || "").trim().toLowerCase();
+
+      if (value === "employee" || value === "karyawan") {
+        return "employee";
+      }
+
+      return "owner";
+    }
+
+    function average(arr) {
+      if (!arr || !arr.length) return 0;
+      return arr.reduce((sum, value) => sum + Number(value || 0), 0) / arr.length;
+    }
+
+    function setText(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }
+  </script>
 </body>
 </html>

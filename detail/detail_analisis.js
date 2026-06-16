@@ -145,6 +145,19 @@ function getRelatedAssessments(targetUmkm, assessments) {
   const targetUmkmId = targetUmkm.umkm_id || targetUmkm.id;
   const targetUmkmName = normalizeText(getUmkmName(targetUmkm));
 
+  if (targetUmkmId) {
+    return assessments.filter((item) => item.umkm_id == targetUmkmId);
+  }
+
+  return assessments.filter((item) => {
+    return normalizeText(item.nama_umkm) === targetUmkmName;
+  });
+}
+
+
+  const targetUmkmId = targetUmkm.umkm_id || targetUmkm.id;
+  const targetUmkmName = normalizeText(getUmkmName(targetUmkm));
+
   return assessments.filter((item) => {
     return item.umkm_id == targetUmkmId || normalizeText(item.nama_umkm) === targetUmkmName;
   });
